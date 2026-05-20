@@ -1,0 +1,111 @@
+{
+  "expo": {
+    "name": "Echo Show Remote",
+    "slug": "echo-show-remote",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "echoremote",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#131921"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.echoshow.remote",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Choose a custom background image for your remote.",
+        "NSMicrophoneUsageDescription": "Used for Alexa voice commands.",
+        "UIBackgroundModes": ["fetch"],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "appStoreUrl": "https://apps.apple.com/app/echo-show-remote",
+      "requireFullScreen": false,
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          }
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#131921"
+      },
+      "package": "com.echoshow.remote",
+      "versionCode": 1,
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34,
+      "minSdkVersion": 24,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.ACCESS_WIFI_STATE",
+        "android.permission.VIBRATE",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.WAKE_LOCK"
+      ],
+      "allowBackup": false,
+      "googleServicesFile": "./google-services.json",
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.echoshow.remote"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "static",
+      "themeColor": "#131921",
+      "backgroundColor": "#131921"
+    },
+    "plugins": [
+      "expo-screen-orientation",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a custom background image for your remote."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#131921",
+          "image": "./assets/splash.png",
+          "imageWidth": 200
+        }
+      ],
+      "expo-keep-awake",
+      [
+        "@bam.tech/react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "EchoShowWidget",
+              "label": "Echo Show Remote",
+              "description": "Control your Echo Show and ask Alexa from your home screen.",
+              "previewImage": "./assets/widget-preview.png",
+              "taskHandler": "./src/components/widget/widgetTaskHandler"
+            }
+          ]
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "echo-show-remote-xxxxxxxx"
+      }
+    },
+    "owner": "leggomyswagg"
+  }
+}

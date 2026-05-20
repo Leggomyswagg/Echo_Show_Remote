@@ -1,0 +1,30 @@
+{
+  "app": {
+    "name": "Echo Show Remote",
+    "subtitle": "Control All Echo Show Generations",
+    "category": "Utilities",
+    "contentRating": "4+"
+  },
+  "shortDescription": "A full-featured smart remote for every Amazon Echo Show — with Alexa text commands, landscape keyboard, and a home screen widget.",
+  "fullDescription": "Echo Show Remote turns your iPhone, iPad, or Android device into a complete remote control for every generation of Amazon Echo Show.\n\nFEATURES:\n• Universal compatibility — works with Echo Show 5, 8, 10, 15, and 21\n• Full smart-TV button layout: D-pad, media, volume, power, brightness, mic, camera, and more\n• Alexa button — tap instead of speaking to send text commands directly to Alexa\n• Landscape mode expands into a full QWERTY keyboard that retracts when you rotate back to portrait\n• Personalize the background with your own photo, a solid color, or a dark gradient\n• Home screen widget for instant one-tap access to Alexa, playback, and volume\n• Haptic feedback for every button press\n• Supports all iPhone, iPad, and Android phone and tablet screen sizes\n• Dark theme designed to match the Echo Show aesthetic",
+  "keywords": [
+    "Echo Show", "Alexa remote", "Amazon remote", "smart display remote",
+    "Echo remote", "Alexa control", "Echo Show 10", "Echo Show 15",
+    "smart home", "voice assistant", "Amazon Echo", "home screen widget"
+  ],
+  "privacyPolicyUrl": "https://github.com/leggomyswagg/echo_show_remote/blob/main/PRIVACY.md",
+  "supportUrl": "https://github.com/leggomyswagg/echo_show_remote/issues",
+  "appleAppStore": {
+    "primaryCategory": "Utilities",
+    "secondaryCategory": "Entertainment",
+    "ageRating": "4+",
+    "priceTier": "Free",
+    "availableCountries": "all"
+  },
+  "googlePlayStore": {
+    "category": "TOOLS",
+    "contentRating": "Everyone",
+    "price": "Free",
+    "targetAudience": "General"
+  }
+}
