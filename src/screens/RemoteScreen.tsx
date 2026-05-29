@@ -4,9 +4,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useOrientation } from '../hooks/useOrientation';
 import { BackgroundView } from '../components/common/BackgroundView';
 import { DPad } from '../components/remote/DPad';
@@ -17,16 +19,22 @@ import { AlexaButton } from '../components/remote/AlexaButton';
 import { SmartAppRow } from '../components/remote/SmartAppRow';
 import { FullKeyboard } from '../components/keyboard/FullKeyboard';
 import { AlexaCommandModal } from '../components/alexa/AlexaCommandModal';
+import { DeviceDiscoveryModal } from '../components/common/DeviceDiscoveryModal';
 import { ConnectionBadge, GenerationBadge } from '../components/common/ConnectionBadge';
+import { useApp } from '../context/AppContext';
 import { Colors } from '../utils/colors';
 
 export function RemoteScreen() {
   const orientation = useOrientation();
+  const { isConnected } = useApp();
   const isLandscape = orientation === 'landscape';
   const [alexaModalVisible, setAlexaModalVisible] = useState(false);
+  const [connectModalVisible, setConnectModalVisible] = useState(false);
 
   const openAlexa = useCallback(() => setAlexaModalVisible(true), []);
   const closeAlexa = useCallback(() => setAlexaModalVisible(false), []);
+  const openConnect = useCallback(() => setConnectModalVisible(true), []);
+  const closeConnect = useCallback(() => setConnectModalVisible(false), []);
 
   return (
     <BackgroundView style={styles.bg}>
@@ -39,7 +47,18 @@ export function RemoteScreen() {
             <Text style={styles.headerTitle}>Echo Show</Text>
             <GenerationBadge />
           </View>
-          <ConnectionBadge />
+          <View style={styles.headerRight}>
+            <TouchableOpacity onPress={openConnect} style={styles.connectBtn} activeOpacity={0.8}>
+              <MaterialCommunityIcons
+                name={isConnected ? 'wifi-check' : 'wifi-alert'}
+                size={16}
+                color={isConnected ? Colors.green : Colors.amazonOrange}
+              />
+              <Text style={[styles.connectBtnText, { color: isConnected ? Colors.green : Colors.amazonOrange }]}>
+                {isConnected ? 'Connected' : 'Connect'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {isLandscape ? (
@@ -51,6 +70,7 @@ export function RemoteScreen() {
       </SafeAreaView>
 
       <AlexaCommandModal visible={alexaModalVisible} onClose={closeAlexa} />
+      <DeviceDiscoveryModal visible={connectModalVisible} onClose={closeConnect} />
     </BackgroundView>
   );
 }
@@ -162,11 +182,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerTitle: {
     color: Colors.white,
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  connectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.amazonNavy,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  connectBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   scroll: { flex: 1 },
   portraitContent: {

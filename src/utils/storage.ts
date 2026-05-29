@@ -8,6 +8,7 @@ const KEYS = {
   DEVICE_IP: 'device_ip',
   DEVICE_PORT: 'device_port',
   ECHO_GENERATION: 'echo_gen',
+  RECENT_HOSTS: 'recent_hosts',
   COMMAND_HISTORY: 'cmd_history',
   HAPTICS_ENABLED: 'haptics',
   CUSTOM_BUTTONS: 'custom_btns',
@@ -105,5 +106,20 @@ export const Storage = {
 
   async clearHistory(): Promise<void> {
     await AsyncStorage.removeItem(KEYS.COMMAND_HISTORY);
+  },
+
+  async getRecentHosts(): Promise<string[]> {
+    try {
+      const raw = await AsyncStorage.getItem(KEYS.RECENT_HOSTS);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  },
+
+  async addRecentHost(host: string): Promise<void> {
+    try {
+      const hosts = await Storage.getRecentHosts();
+      const updated = [host, ...hosts.filter(h => h !== host)].slice(0, 5);
+      await AsyncStorage.setItem(KEYS.RECENT_HOSTS, JSON.stringify(updated));
+    } catch { /* ignore */ }
   },
 };
