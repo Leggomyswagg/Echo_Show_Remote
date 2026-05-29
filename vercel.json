@@ -4,6 +4,9 @@
   "framework": null,
   "installCommand": "npm install --omit=optional",
   "regions": ["iad1"],
+  "env": {
+    "EXPO_PLATFORM": "web"
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],

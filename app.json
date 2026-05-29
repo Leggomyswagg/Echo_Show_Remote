@@ -84,21 +84,6 @@
           "image": "./assets/splash.png",
           "imageWidth": 200
         }
-      ],
-      "expo-keep-awake",
-      [
-        "@bam.tech/react-native-android-widget",
-        {
-          "widgets": [
-            {
-              "name": "EchoShowWidget",
-              "label": "Echo Show Remote",
-              "description": "Control your Echo Show and ask Alexa from your home screen.",
-              "previewImage": "./assets/widget-preview.png",
-              "taskHandler": "./src/components/widget/widgetTaskHandler"
-            }
-          ]
-        }
       ]
     ],
     "extra": {
