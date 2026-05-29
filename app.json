@@ -65,7 +65,7 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "themeColor": "#131921",
       "backgroundColor": "#131921"
     },
