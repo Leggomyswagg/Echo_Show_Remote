@@ -9,8 +9,9 @@ export const PREMIUM_FEATURE_LIST = [
 export type PremiumFeature = typeof PREMIUM_FEATURE_LIST[number];
 
 export const PRICING = {
-  ONE_TIME: '$2.99',
+  ONE_TIME: '$4.99',
   MONTHLY: '$1.99',
+  ANNUAL: '$9.99',
 };
 
 const PREMIUM_KEY = 'is_premium_v1';

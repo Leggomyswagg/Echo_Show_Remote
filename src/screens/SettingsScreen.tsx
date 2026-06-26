@@ -148,7 +148,7 @@ export function SettingsScreen() {
                 <View>
                   <Text style={styles.premiumBannerTitle}>Go Premium</Text>
                   <Text style={styles.premiumBannerSub}>
-                    Unlock all features · {PRICING.ONE_TIME} one-time or {PRICING.MONTHLY}/mo
+                    {PRICING.ANNUAL}/yr · {PRICING.ONE_TIME} one-time · {PRICING.MONTHLY}/mo
                   </Text>
                 </View>
               </View>

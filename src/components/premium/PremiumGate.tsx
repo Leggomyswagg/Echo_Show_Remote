@@ -33,28 +33,32 @@ const FEATURE_LIST = [
 
 export function PremiumGate({ visible, onClose, featureName }: Props) {
   const { buyOneTime, buyMonthly, restore } = usePremium();
-  const [loading, setLoading] = useState<'onetime' | 'monthly' | 'restore' | null>(null);
+  const [loading, setLoading] = useState<'onetime' | 'annual' | 'monthly' | 'restore' | null>(null);
+
+  const unlockAlert = () =>
+    Alert.alert('Welcome to Premium!', 'All features are now unlocked.', [
+      { text: "Let's Go!", onPress: onClose },
+    ]);
 
   const handleOneTime = async () => {
     setLoading('onetime');
     const ok = await buyOneTime();
     setLoading(null);
-    if (ok) {
-      Alert.alert('Welcome to Premium!', 'All features are now unlocked.', [
-        { text: 'Let\'s Go!', onPress: onClose },
-      ]);
-    }
+    if (ok) unlockAlert();
+  };
+
+  const handleAnnual = async () => {
+    setLoading('annual');
+    const ok = await buyMonthly(); // reuses same IAP stub
+    setLoading(null);
+    if (ok) unlockAlert();
   };
 
   const handleMonthly = async () => {
     setLoading('monthly');
     const ok = await buyMonthly();
     setLoading(null);
-    if (ok) {
-      Alert.alert('Welcome to Premium!', 'All features are now unlocked.', [
-        { text: 'Let\'s Go!', onPress: onClose },
-      ]);
-    }
+    if (ok) unlockAlert();
   };
 
   const handleRestore = async () => {
@@ -104,42 +108,66 @@ export function PremiumGate({ visible, onClose, featureName }: Props) {
             ))}
           </View>
 
-          {/* Pricing buttons */}
-          <TouchableOpacity
-            style={styles.primaryBtn}
-            onPress={handleOneTime}
-            activeOpacity={0.85}
-            disabled={loading !== null}
-          >
-            <LinearGradient
-              colors={['#AA44FF', '#7B00FF']}
-              style={[StyleSheet.absoluteFill, { borderRadius: 14 }]}
-            />
-            {loading === 'onetime' ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Text style={styles.primaryBtnText}>{PRICING.ONE_TIME} One-Time</Text>
-                <Text style={styles.primaryBtnSub}>Lifetime access • No subscription</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          {/* Annual — hero option */}
+          <View style={styles.bestValueWrapper}>
+            <View style={styles.bestValueBadge}>
+              <Text style={styles.bestValueText}>BEST VALUE</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={handleAnnual}
+              activeOpacity={0.85}
+              disabled={loading !== null}
+            >
+              <LinearGradient
+                colors={['#AA44FF', '#7B00FF']}
+                style={[StyleSheet.absoluteFill, { borderRadius: 14 }]}
+              />
+              {loading === 'annual' ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Text style={styles.primaryBtnText}>{PRICING.ANNUAL}/year</Text>
+                  <Text style={styles.primaryBtnSub}>Under $1/month • Cancel anytime</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={handleMonthly}
-            activeOpacity={0.85}
-            disabled={loading !== null}
-          >
-            {loading === 'monthly' ? (
-              <ActivityIndicator color="#AA44FF" />
-            ) : (
-              <>
-                <Text style={styles.secondaryBtnText}>{PRICING.MONTHLY}/month</Text>
-                <Text style={styles.secondaryBtnSub}>Cancel anytime</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          {/* One-time + Monthly row */}
+          <View style={styles.secondaryRow}>
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={handleOneTime}
+              activeOpacity={0.85}
+              disabled={loading !== null}
+            >
+              {loading === 'onetime' ? (
+                <ActivityIndicator color="#AA44FF" />
+              ) : (
+                <>
+                  <Text style={styles.secondaryBtnText}>{PRICING.ONE_TIME}</Text>
+                  <Text style={styles.secondaryBtnSub}>One-time</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={handleMonthly}
+              activeOpacity={0.85}
+              disabled={loading !== null}
+            >
+              {loading === 'monthly' ? (
+                <ActivityIndicator color="#AA44FF" />
+              ) : (
+                <>
+                  <Text style={styles.secondaryBtnText}>{PRICING.MONTHLY}/mo</Text>
+                  <Text style={styles.secondaryBtnSub}>Monthly</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
 
           {/* Restore + close */}
           <View style={styles.footer}>
@@ -194,6 +222,14 @@ const styles = StyleSheet.create({
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   featureText: { color: '#DDAAFF', fontSize: 13 },
 
+  bestValueWrapper: { gap: 0 },
+  bestValueBadge: {
+    alignSelf: 'center', backgroundColor: '#FFD700',
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3,
+    marginBottom: -1, zIndex: 1,
+  },
+  bestValueText: { color: '#1A0A35', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+
   primaryBtn: {
     height: 64, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
@@ -202,8 +238,9 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: '#fff', fontSize: 17, fontWeight: '800' },
   primaryBtnSub: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
 
+  secondaryRow: { flexDirection: 'row', gap: 10 },
   secondaryBtn: {
-    height: 52, borderRadius: 14,
+    flex: 1, height: 52, borderRadius: 14,
     borderWidth: 1.5, borderColor: '#AA44FF',
     alignItems: 'center', justifyContent: 'center', gap: 2,
   },
