@@ -3,7 +3,7 @@ import React, {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  PremiumStorage, purchaseOneTime, purchaseMonthly, restorePurchases,
+  PremiumStorage, purchaseLifetime, purchaseAnnual, purchaseMonthly, restorePurchases,
 } from '../utils/premiumFeatures';
 import { THEMES, AppTheme } from '../utils/themes';
 
@@ -23,7 +23,8 @@ interface PremiumContextValue {
   selectedThemeId: string;
   currentTheme: AppTheme;
   setTheme: (id: string) => Promise<void>;
-  buyOneTime: () => Promise<boolean>;
+  buyLifetime: () => Promise<boolean>;
+  buyAnnual: () => Promise<boolean>;
   buyMonthly: () => Promise<boolean>;
   restore: () => Promise<boolean>;
   setPremium: (val: boolean) => Promise<void>;
@@ -79,8 +80,14 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const buyOneTime = useCallback(async () => {
-    const ok = await purchaseOneTime();
+  const buyLifetime = useCallback(async () => {
+    const ok = await purchaseLifetime();
+    if (ok) setIsPremiumState(true);
+    return ok;
+  }, []);
+
+  const buyAnnual = useCallback(async () => {
+    const ok = await purchaseAnnual();
     if (ok) setIsPremiumState(true);
     return ok;
   }, []);
@@ -128,7 +135,8 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       selectedThemeId: currentTheme.id,
       currentTheme,
       setTheme,
-      buyOneTime,
+      buyLifetime,
+      buyAnnual,
       buyMonthly,
       restore,
       setPremium,

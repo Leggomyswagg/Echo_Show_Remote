@@ -32,24 +32,24 @@ const FEATURE_LIST = [
 ];
 
 export function PremiumGate({ visible, onClose, featureName }: Props) {
-  const { buyOneTime, buyMonthly, restore } = usePremium();
-  const [loading, setLoading] = useState<'onetime' | 'annual' | 'monthly' | 'restore' | null>(null);
+  const { buyLifetime, buyAnnual, buyMonthly, restore } = usePremium();
+  const [loading, setLoading] = useState<'lifetime' | 'annual' | 'monthly' | 'restore' | null>(null);
 
   const unlockAlert = () =>
     Alert.alert('Welcome to Premium!', 'All features are now unlocked.', [
       { text: "Let's Go!", onPress: onClose },
     ]);
 
-  const handleOneTime = async () => {
-    setLoading('onetime');
-    const ok = await buyOneTime();
+  const handleLifetime = async () => {
+    setLoading('lifetime');
+    const ok = await buyLifetime();
     setLoading(null);
     if (ok) unlockAlert();
   };
 
   const handleAnnual = async () => {
     setLoading('annual');
-    const ok = await buyMonthly(); // reuses same IAP stub
+    const ok = await buyAnnual();
     setLoading(null);
     if (ok) unlockAlert();
   };
@@ -111,7 +111,7 @@ export function PremiumGate({ visible, onClose, featureName }: Props) {
           {/* Annual — hero option */}
           <View style={styles.bestValueWrapper}>
             <View style={styles.bestValueBadge}>
-              <Text style={styles.bestValueText}>BEST VALUE</Text>
+              <Text style={styles.bestValueText}>MOST POPULAR</Text>
             </View>
             <TouchableOpacity
               style={styles.primaryBtn}
@@ -127,27 +127,27 @@ export function PremiumGate({ visible, onClose, featureName }: Props) {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <>
-                  <Text style={styles.primaryBtnText}>{PRICING.ANNUAL}/year</Text>
-                  <Text style={styles.primaryBtnSub}>Under $1/month • Cancel anytime</Text>
+                  <Text style={styles.primaryBtnText}>{PRICING.ANNUAL} / year</Text>
+                  <Text style={styles.primaryBtnSub}>Under $1/month · Cancel anytime</Text>
                 </>
               )}
             </TouchableOpacity>
           </View>
 
-          {/* One-time + Monthly row */}
+          {/* Lifetime + Monthly row */}
           <View style={styles.secondaryRow}>
             <TouchableOpacity
               style={styles.secondaryBtn}
-              onPress={handleOneTime}
+              onPress={handleLifetime}
               activeOpacity={0.85}
               disabled={loading !== null}
             >
-              {loading === 'onetime' ? (
+              {loading === 'lifetime' ? (
                 <ActivityIndicator color="#AA44FF" />
               ) : (
                 <>
-                  <Text style={styles.secondaryBtnText}>{PRICING.ONE_TIME}</Text>
-                  <Text style={styles.secondaryBtnSub}>One-time</Text>
+                  <Text style={styles.secondaryBtnText}>{PRICING.LIFETIME}</Text>
+                  <Text style={styles.secondaryBtnSub}>Lifetime access</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -162,7 +162,7 @@ export function PremiumGate({ visible, onClose, featureName }: Props) {
                 <ActivityIndicator color="#AA44FF" />
               ) : (
                 <>
-                  <Text style={styles.secondaryBtnText}>{PRICING.MONTHLY}/mo</Text>
+                  <Text style={styles.secondaryBtnText}>{PRICING.MONTHLY} / mo</Text>
                   <Text style={styles.secondaryBtnSub}>Monthly</Text>
                 </>
               )}

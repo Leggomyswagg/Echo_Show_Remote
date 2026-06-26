@@ -9,9 +9,9 @@ export const PREMIUM_FEATURE_LIST = [
 export type PremiumFeature = typeof PREMIUM_FEATURE_LIST[number];
 
 export const PRICING = {
-  ONE_TIME: '$4.99',
   MONTHLY: '$1.99',
   ANNUAL: '$9.99',
+  LIFETIME: '$19.99',
 };
 
 const PREMIUM_KEY = 'is_premium_v1';
@@ -27,7 +27,12 @@ export const PremiumStorage = {
 };
 
 // Stub IAP — replace with expo-in-app-purchases or react-native-iap
-export async function purchaseOneTime(): Promise<boolean> {
+export async function purchaseLifetime(): Promise<boolean> {
+  await PremiumStorage.setIsPremium(true);
+  return true;
+}
+
+export async function purchaseAnnual(): Promise<boolean> {
   await PremiumStorage.setIsPremium(true);
   return true;
 }

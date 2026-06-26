@@ -52,7 +52,7 @@ const AMAZON_ECHO_URL = 'https://www.amazon.com/s?k=amazon+echo&tag=echoremote-2
 export function SettingsScreen() {
   const { settings, updateSettings, isConnected, checkConnection } = useApp();
   const {
-    isPremium, buyOneTime, buyMonthly, restore,
+    isPremium, restore,
     parentalPin, setParentalPin, kidModeActive, setKidMode,
     accessibilityMode, setAccessibilityMode,
     sleepSchedule, setSleepSchedule,
@@ -148,7 +148,7 @@ export function SettingsScreen() {
                 <View>
                   <Text style={styles.premiumBannerTitle}>Go Premium</Text>
                   <Text style={styles.premiumBannerSub}>
-                    {PRICING.ANNUAL}/yr · {PRICING.ONE_TIME} one-time · {PRICING.MONTHLY}/mo
+                    {PRICING.ANNUAL}/yr · {PRICING.LIFETIME} lifetime · {PRICING.MONTHLY}/mo
                   </Text>
                 </View>
               </View>
