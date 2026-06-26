@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { StyleSheet, View, ImageBackground, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
+import { useTheme } from '../../context/ThemeContext';
 import { Colors } from '../../utils/colors';
 
 interface BackgroundViewProps {
@@ -11,6 +12,7 @@ interface BackgroundViewProps {
 
 export function BackgroundView({ children, style }: BackgroundViewProps) {
   const { settings } = useApp();
+  const theme = useTheme();
 
   const inner = (
     <View style={[StyleSheet.absoluteFill, style]}>
@@ -52,10 +54,11 @@ export function BackgroundView({ children, style }: BackgroundViewProps) {
     );
   }
 
-  // Default: Amazon dark gradient
+  // Default: use active theme gradient
+  const [c1, c2] = theme.colors.bgGradient;
   return (
     <LinearGradient
-      colors={[Colors.gradient.start, Colors.gradient.mid, Colors.gradient.end]}
+      colors={[c1, c2]}
       style={[styles.container, style]}
       start={{ x: 0, y: 0 }}
       end={{ x: 0.5, y: 1 }}

@@ -21,6 +21,7 @@ import { FullKeyboard } from '../components/keyboard/FullKeyboard';
 import { AlexaCommandModal } from '../components/alexa/AlexaCommandModal';
 import { DeviceDiscoveryModal } from '../components/common/DeviceDiscoveryModal';
 import { ConnectionBadge, GenerationBadge } from '../components/common/ConnectionBadge';
+import { NowPlayingScreen } from './NowPlayingScreen';
 import { useApp } from '../context/AppContext';
 import { Colors } from '../utils/colors';
 
@@ -30,6 +31,7 @@ export function RemoteScreen() {
   const isLandscape = orientation === 'landscape';
   const [alexaModalVisible, setAlexaModalVisible] = useState(false);
   const [connectModalVisible, setConnectModalVisible] = useState(false);
+  const [nowPlayingVisible, setNowPlayingVisible] = useState(false);
 
   const openAlexa = useCallback(() => setAlexaModalVisible(true), []);
   const closeAlexa = useCallback(() => setAlexaModalVisible(false), []);
@@ -48,7 +50,11 @@ export function RemoteScreen() {
             <GenerationBadge />
           </View>
           <View style={styles.headerRight}>
-            <TouchableOpacity onPress={openConnect} style={styles.connectBtn} activeOpacity={0.8}>
+            <TouchableOpacity onPress={() => setNowPlayingVisible(true)} style={styles.connectBtn} activeOpacity={0.8}>
+              <MaterialCommunityIcons name="music-note" size={15} color={Colors.alexaBlue} />
+              <Text style={[styles.connectBtnText, { color: Colors.alexaBlue }]}>Now Playing</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={openConnect} style={[styles.connectBtn, { marginLeft: 6 }]} activeOpacity={0.8}>
               <MaterialCommunityIcons
                 name={isConnected ? 'wifi-check' : 'wifi-alert'}
                 size={16}
@@ -71,6 +77,7 @@ export function RemoteScreen() {
 
       <AlexaCommandModal visible={alexaModalVisible} onClose={closeAlexa} />
       <DeviceDiscoveryModal visible={connectModalVisible} onClose={closeConnect} />
+      <NowPlayingScreen asModal visible={nowPlayingVisible} onClose={() => setNowPlayingVisible(false)} />
     </BackgroundView>
   );
 }

@@ -8,6 +8,7 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import * as KeepAwake from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
 import { AppProvider } from './src/context/AppContext';
+import { PremiumProvider } from './src/context/PremiumContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 
 // Enable layout animations on Android
@@ -35,10 +36,12 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AppProvider>
-          <StatusBar style="light" translucent />
-          <AppNavigator />
-        </AppProvider>
+        <PremiumProvider>
+          <AppProvider>
+            <StatusBar style="light" translucent />
+            <AppNavigator />
+          </AppProvider>
+        </PremiumProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

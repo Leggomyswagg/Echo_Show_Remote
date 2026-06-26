@@ -12,17 +12,21 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../utils/colors';
 import { BackgroundView } from '../components/common/BackgroundView';
+import { ThemeSelector } from '../components/premium/ThemeSelector';
+import { PremiumGate } from '../components/premium/PremiumGate';
 import { useApp } from '../context/AppContext';
+import { usePremium } from '../context/PremiumContext';
 import { Storage } from '../utils/storage';
 import { isTablet } from '../utils/responsive';
+import { PRICING } from '../utils/premiumFeatures';
 
-// ── Generation selector data ────────────────────────────────────────────────
 const GENERATIONS = [
   { id: 'show5', label: 'Echo Show 5', desc: '5.5" • 3rd Gen', color: Colors.echoGenerations.show5 },
   { id: 'show8', label: 'Echo Show 8', desc: '8" • 3rd Gen', color: Colors.echoGenerations.show8 },
@@ -32,14 +36,9 @@ const GENERATIONS = [
 ];
 
 const BG_PRESETS: [string, string][] = [
-  ['#131921', '#1A2535'],
-  ['#0D1B2A', '#1B4F72'],
-  ['#1A0533', '#4A148C'],
-  ['#0A1628', '#1E3A5F'],
-  ['#1B2631', '#2E4053'],
-  ['#0B3D2E', '#1E8449'],
-  ['#2D1B69', '#11998E'],
-  ['#1C1C1C', '#3D3D3D'],
+  ['#131921', '#1A2535'], ['#0D1B2A', '#1B4F72'], ['#1A0533', '#4A148C'],
+  ['#0A1628', '#1E3A5F'], ['#1B2631', '#2E4053'], ['#0B3D2E', '#1E8449'],
+  ['#2D1B69', '#11998E'], ['#1C1C1C', '#3D3D3D'],
 ];
 
 const SOLID_COLORS = [
@@ -47,12 +46,25 @@ const SOLID_COLORS = [
   '#1B1B2F', '#162447', '#1F4068', '#1B262C',
 ];
 
+const AMAZON_DEALS_URL = 'https://www.amazon.com/deals?tag=echoremote-20';
+const AMAZON_ECHO_URL = 'https://www.amazon.com/s?k=amazon+echo&tag=echoremote-20';
+
 export function SettingsScreen() {
   const { settings, updateSettings, isConnected, checkConnection } = useApp();
+  const {
+    isPremium, buyOneTime, buyMonthly, restore,
+    parentalPin, setParentalPin, kidModeActive, setKidMode,
+    accessibilityMode, setAccessibilityMode,
+    sleepSchedule, setSleepSchedule,
+  } = usePremium();
+
   const [ip, setIp] = useState(settings.deviceIp);
   const [port, setPort] = useState(settings.devicePort);
   const [testing, setTesting] = useState(false);
   const [historyClearing, setHistoryClearing] = useState(false);
+  const [gateVisible, setGateVisible] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinMode, setPinMode] = useState<'set' | 'remove' | null>(null);
 
   const handleSaveConnection = useCallback(async () => {
     await updateSettings({ deviceIp: ip.trim(), devicePort: port.trim() });
@@ -81,17 +93,41 @@ export function SettingsScreen() {
     Alert.alert('Clear History', 'Remove all Alexa command history?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Clear',
-        style: 'destructive',
+        text: 'Clear', style: 'destructive',
         onPress: async () => {
           setHistoryClearing(true);
           await Storage.clearHistory();
           setHistoryClearing(false);
-          Alert.alert('Done', 'History cleared.');
         },
       },
     ]);
   }, []);
+
+  const handleSetPin = () => {
+    if (pinInput.length < 4) {
+      Alert.alert('Invalid PIN', 'PIN must be at least 4 digits.');
+      return;
+    }
+    setParentalPin(pinInput);
+    setPinInput('');
+    setPinMode(null);
+    Alert.alert('PIN Set', 'Parental PIN has been set.');
+  };
+
+  const handleRemovePin = () => {
+    if (pinInput !== parentalPin) {
+      Alert.alert('Wrong PIN', 'The PIN you entered is incorrect.');
+      return;
+    }
+    setParentalPin(null);
+    setPinInput('');
+    setPinMode(null);
+  };
+
+  const openPremiumFeature = (feature: () => void) => {
+    if (!isPremium) { setGateVisible(true); return; }
+    feature();
+  };
 
   return (
     <BackgroundView style={styles.bg}>
@@ -104,7 +140,34 @@ export function SettingsScreen() {
         >
           <Text style={styles.pageTitle}>Settings</Text>
 
-          {/* ── Device Connection ─────────────────────────────── */}
+          {/* ── Premium ──────────────────────────────────────────── */}
+          {!isPremium ? (
+            <LinearGradient colors={['#1A0A35', '#0D0020']} style={styles.premiumBanner}>
+              <View style={styles.premiumBannerLeft}>
+                <MaterialCommunityIcons name="crown" size={24} color="#FFD700" />
+                <View>
+                  <Text style={styles.premiumBannerTitle}>Go Premium</Text>
+                  <Text style={styles.premiumBannerSub}>
+                    Unlock all features · {PRICING.ONE_TIME} one-time or {PRICING.MONTHLY}/mo
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => setGateVisible(true)}
+                style={styles.premiumBannerBtn}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.premiumBannerBtnText}>Upgrade</Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          ) : (
+            <View style={styles.premiumActive}>
+              <MaterialCommunityIcons name="crown" size={20} color="#FFD700" />
+              <Text style={styles.premiumActiveText}>Premium Active · All features unlocked</Text>
+            </View>
+          )}
+
+          {/* ── Device Connection ──────────────────────────────── */}
           <SectionCard title="Device Connection" icon="wifi">
             <Row label="Echo Show IP Address">
               <TextInput
@@ -133,11 +196,7 @@ export function SettingsScreen() {
                 {isConnected ? 'Connected' : 'Not connected'}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.primaryBtn}
-              onPress={handleSaveConnection}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleSaveConnection} activeOpacity={0.8}>
               {testing ? (
                 <ActivityIndicator size="small" color={Colors.amazonDark} />
               ) : (
@@ -147,6 +206,17 @@ export function SettingsScreen() {
             <Text style={styles.hint}>
               Install the Echo Show Remote companion server on a device on your local network.
             </Text>
+          </SectionCard>
+
+          {/* ── Themes ───────────────────────────────────────────── */}
+          <SectionCard title="App Theme" icon="palette">
+            <ThemeSelector />
+            {!isPremium && (
+              <TouchableOpacity onPress={() => setGateVisible(true)} style={styles.unlockHint} activeOpacity={0.8}>
+                <MaterialCommunityIcons name="lock" size={13} color="#AA44FF" />
+                <Text style={styles.unlockHintText}>Upgrade to unlock 7 premium themes</Text>
+              </TouchableOpacity>
+            )}
           </SectionCard>
 
           {/* ── Echo Show Generation ──────────────────────────── */}
@@ -180,16 +250,12 @@ export function SettingsScreen() {
 
           {/* ── Background ───────────────────────────────────── */}
           <SectionCard title="Background" icon="image">
-            {/* Type tabs */}
             <View style={styles.bgTypeTabs}>
               {(['default', 'gradient', 'color', 'image'] as const).map(type => (
                 <TouchableOpacity
                   key={type}
                   onPress={() => updateSettings({ backgroundType: type })}
-                  style={[
-                    styles.bgTypeTab,
-                    settings.backgroundType === type && styles.bgTypeTabActive,
-                  ]}
+                  style={[styles.bgTypeTab, settings.backgroundType === type && styles.bgTypeTabActive]}
                 >
                   <Text style={[
                     styles.bgTypeTabText,
@@ -211,12 +277,7 @@ export function SettingsScreen() {
                       onPress={() => updateSettings({ backgroundGradient: [a, b] })}
                       style={styles.gradientSwatch}
                     >
-                      <LinearGradient
-                        colors={[a, b]}
-                        style={StyleSheet.absoluteFill}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                      />
+                      <LinearGradient colors={[a, b]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                       {JSON.stringify(settings.backgroundGradient) === JSON.stringify([a, b]) && (
                         <MaterialCommunityIcons name="check" size={18} color="#fff" />
                       )}
@@ -247,12 +308,12 @@ export function SettingsScreen() {
 
             {settings.backgroundType === 'image' && (
               <View style={styles.imagePickerSection}>
-                {settings.backgroundImage ? (
+                {settings.backgroundImage && (
                   <View style={styles.imagePicked}>
                     <MaterialCommunityIcons name="image-check" size={28} color={Colors.green} />
                     <Text style={styles.imagePickedText}>Custom image set</Text>
                   </View>
-                ) : null}
+                )}
                 <TouchableOpacity style={styles.primaryBtn} onPress={handlePickImage} activeOpacity={0.8}>
                   <MaterialCommunityIcons name="image-plus" size={18} color={Colors.amazonDark} style={{ marginRight: 6 }} />
                   <Text style={styles.primaryBtnText}>
@@ -273,9 +334,161 @@ export function SettingsScreen() {
                 thumbColor={Colors.white}
               />
             </Row>
+            <Row label="Accessibility Mode">
+              <Switch
+                value={accessibilityMode}
+                onValueChange={v => openPremiumFeature(() => setAccessibilityMode(v))}
+                trackColor={{ false: Colors.darkGray, true: Colors.alexaBlue }}
+                thumbColor={Colors.white}
+              />
+            </Row>
+            {!isPremium && (
+              <Text style={styles.premiumNote}>
+                <MaterialCommunityIcons name="lock" size={11} color="#AA44FF" /> Accessibility Mode requires Premium
+              </Text>
+            )}
           </SectionCard>
 
-          {/* ── Widget Setup ─────────────────────────────────── */}
+          {/* ── Parental Controls ─────────────────────────────── */}
+          <SectionCard title="Parental Controls" icon="account-child">
+            {!isPremium ? (
+              <PremiumLockedRow featureName="Parental Controls" onUnlock={() => setGateVisible(true)} />
+            ) : (
+              <>
+                <Row label="Kid Mode">
+                  <Switch
+                    value={kidModeActive}
+                    onValueChange={setKidMode}
+                    trackColor={{ false: Colors.darkGray, true: Colors.amazonOrange }}
+                    thumbColor={Colors.white}
+                  />
+                </Row>
+                {kidModeActive && (
+                  <View style={styles.kidModeActive}>
+                    <MaterialCommunityIcons name="emoticon-happy" size={16} color={Colors.amazonOrange} />
+                    <Text style={styles.kidModeText}>Kid Mode is active — restricted content only</Text>
+                  </View>
+                )}
+                <View style={styles.pinSection}>
+                  <Text style={styles.pinLabel}>
+                    PIN: {parentalPin ? '••••' : 'Not set'}
+                  </Text>
+                  {pinMode === null ? (
+                    <View style={styles.pinBtnRow}>
+                      <TouchableOpacity style={styles.pinBtn} onPress={() => setPinMode('set')}>
+                        <Text style={styles.pinBtnText}>{parentalPin ? 'Change PIN' : 'Set PIN'}</Text>
+                      </TouchableOpacity>
+                      {parentalPin && (
+                        <TouchableOpacity style={[styles.pinBtn, styles.pinBtnDanger]} onPress={() => setPinMode('remove')}>
+                          <Text style={[styles.pinBtnText, { color: Colors.red }]}>Remove PIN</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ) : (
+                    <View style={styles.pinInputRow}>
+                      <TextInput
+                        value={pinInput}
+                        onChangeText={setPinInput}
+                        style={[styles.input, { flex: 1 }]}
+                        placeholder={pinMode === 'remove' ? 'Enter current PIN' : 'Enter new PIN (min 4 digits)'}
+                        placeholderTextColor={Colors.gray}
+                        keyboardType="number-pad"
+                        secureTextEntry
+                        maxLength={6}
+                      />
+                      <TouchableOpacity
+                        onPress={pinMode === 'set' ? handleSetPin : handleRemovePin}
+                        style={styles.pinConfirmBtn}
+                      >
+                        <MaterialCommunityIcons name="check" size={18} color={Colors.amazonDark} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => { setPinMode(null); setPinInput(''); }}
+                        style={styles.pinCancelBtn}
+                      >
+                        <MaterialCommunityIcons name="close" size={18} color={Colors.gray} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              </>
+            )}
+          </SectionCard>
+
+          {/* ── Sleep / Wake Scheduler ─────────────────────────── */}
+          <SectionCard title="Sleep / Wake Scheduler" icon="clock-time-eight">
+            {!isPremium ? (
+              <PremiumLockedRow featureName="Sleep Scheduler" onUnlock={() => setGateVisible(true)} />
+            ) : (
+              <>
+                <Row label="Enable Scheduler">
+                  <Switch
+                    value={sleepSchedule.enabled}
+                    onValueChange={v => setSleepSchedule({ ...sleepSchedule, enabled: v })}
+                    trackColor={{ false: Colors.darkGray, true: Colors.alexaBlue }}
+                    thumbColor={Colors.white}
+                  />
+                </Row>
+                {sleepSchedule.enabled && (
+                  <View style={styles.scheduleGrid}>
+                    <View style={styles.scheduleItem}>
+                      <MaterialCommunityIcons name="weather-night" size={16} color="#4488FF" />
+                      <Text style={styles.scheduleLabel}>Sleep</Text>
+                      <TextInput
+                        value={sleepSchedule.sleepTime}
+                        onChangeText={v => setSleepSchedule({ ...sleepSchedule, sleepTime: v })}
+                        style={styles.timeInput}
+                        placeholder="22:00"
+                        placeholderTextColor={Colors.gray}
+                        keyboardType="numbers-and-punctuation"
+                      />
+                    </View>
+                    <View style={styles.scheduleItem}>
+                      <MaterialCommunityIcons name="weather-sunny" size={16} color="#FFB300" />
+                      <Text style={styles.scheduleLabel}>Wake</Text>
+                      <TextInput
+                        value={sleepSchedule.wakeTime}
+                        onChangeText={v => setSleepSchedule({ ...sleepSchedule, wakeTime: v })}
+                        style={styles.timeInput}
+                        placeholder="07:00"
+                        placeholderTextColor={Colors.gray}
+                        keyboardType="numbers-and-punctuation"
+                      />
+                    </View>
+                  </View>
+                )}
+                <Text style={styles.hint}>Automatically send sleep/wake commands to your Echo Show at scheduled times.</Text>
+              </>
+            )}
+          </SectionCard>
+
+          {/* ── Amazon Shopping ──────────────────────────────────── */}
+          <SectionCard title="Amazon Shopping" icon="shopping">
+            <Text style={styles.shopDesc}>
+              Quick links to Amazon deals and Echo accessories.
+            </Text>
+            <TouchableOpacity
+              style={[styles.primaryBtn, { backgroundColor: Colors.amazonOrange }]}
+              onPress={() => Linking.openURL(AMAZON_DEALS_URL)}
+              activeOpacity={0.85}
+            >
+              <MaterialCommunityIcons name="tag" size={16} color={Colors.amazonDark} style={{ marginRight: 6 }} />
+              <Text style={styles.primaryBtnText}>Amazon Today's Deals</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.primaryBtn, { backgroundColor: Colors.amazonNavy }]}
+              onPress={() => Linking.openURL(AMAZON_ECHO_URL)}
+              activeOpacity={0.85}
+            >
+              <MaterialCommunityIcons name="microphone" size={16} color={Colors.white} style={{ marginRight: 6 }} />
+              <Text style={[styles.primaryBtnText, { color: Colors.white }]}>Shop Echo Devices</Text>
+            </TouchableOpacity>
+            <Text style={styles.affiliateDisclosure}>
+              Links may include affiliate commissions that support app development.
+            </Text>
+          </SectionCard>
+
+          {/* ── Widget Setup ─────────────────────────────────────── */}
           <SectionCard title="Home Screen Widget" icon="widgets">
             <View style={styles.widgetInfo}>
               <MaterialCommunityIcons name="information-outline" size={18} color={Colors.alexaBlue} />
@@ -301,13 +514,9 @@ export function SettingsScreen() {
             )}
           </SectionCard>
 
-          {/* ── Data ─────────────────────────────────────────── */}
+          {/* ── Data ──────────────────────────────────────────────── */}
           <SectionCard title="Data" icon="database">
-            <TouchableOpacity
-              style={styles.dangerBtn}
-              onPress={handleClearHistory}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.dangerBtn} onPress={handleClearHistory} activeOpacity={0.8}>
               {historyClearing ? (
                 <ActivityIndicator size="small" color={Colors.red} />
               ) : (
@@ -316,7 +525,7 @@ export function SettingsScreen() {
             </TouchableOpacity>
           </SectionCard>
 
-          {/* ── About ────────────────────────────────────────── */}
+          {/* ── About ─────────────────────────────────────────────── */}
           <SectionCard title="About" icon="information">
             <Row label="Version"><Text style={styles.valueText}>1.0.0</Text></Row>
             <Row label="Platform">
@@ -324,25 +533,42 @@ export function SettingsScreen() {
                 {Platform.OS === 'ios' ? 'iOS' : 'Android'} {isTablet ? '(Tablet)' : '(Phone)'}
               </Text>
             </Row>
-            <Row label="Compatible With">
-              <Text style={styles.valueText}>All Echo Show generations</Text>
+            <Row label="Status">
+              <Text style={[styles.valueText, { color: isPremium ? '#FFD700' : Colors.gray }]}>
+                {isPremium ? 'Premium' : 'Free'}
+              </Text>
             </Row>
+            {isPremium && (
+              <TouchableOpacity onPress={() => restore()} style={styles.restoreBtn} activeOpacity={0.8}>
+                <Text style={styles.restoreBtnText}>Restore Purchase</Text>
+              </TouchableOpacity>
+            )}
           </SectionCard>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Echo Show Remote • Available on App Store & Google Play</Text>
+            <Text style={styles.footerText}>Echo Show Remote • App Store & Google Play</Text>
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      <PremiumGate visible={gateVisible} onClose={() => setGateVisible(false)} />
     </BackgroundView>
   );
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function SectionCard({
-  title, icon, children,
-}: { title: string; icon: string; children: React.ReactNode }) {
+function PremiumLockedRow({ featureName, onUnlock }: { featureName: string; onUnlock: () => void }) {
+  return (
+    <TouchableOpacity onPress={onUnlock} style={styles.lockedRow} activeOpacity={0.8}>
+      <MaterialCommunityIcons name="lock" size={16} color="#AA44FF" />
+      <Text style={styles.lockedRowText}>{featureName} requires Premium</Text>
+      <MaterialCommunityIcons name="crown" size={14} color="#FFD700" />
+    </TouchableOpacity>
+  );
+}
+
+function SectionCard({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -370,83 +596,64 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 14, paddingBottom: 40 },
   tabletContent: { paddingHorizontal: 40, maxWidth: 800, alignSelf: 'center', width: '100%' },
   pageTitle: {
-    color: Colors.white,
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 4,
-    marginTop: 8,
-    letterSpacing: 0.5,
+    color: Colors.white, fontSize: 28, fontWeight: '800',
+    marginBottom: 4, marginTop: 8, letterSpacing: 0.5,
   },
+
+  // Premium banner
+  premiumBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#AA44FF44',
+  },
+  premiumBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  premiumBannerTitle: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  premiumBannerSub: { color: Colors.gray, fontSize: 11, marginTop: 2 },
+  premiumBannerBtn: {
+    backgroundColor: '#AA44FF', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8,
+  },
+  premiumBannerBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  premiumActive: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(255,215,0,0.1)', borderRadius: 12, padding: 12,
+    borderWidth: 1, borderColor: 'rgba(255,215,0,0.3)',
+  },
+  premiumActiveText: { color: '#FFD700', fontSize: 13, fontWeight: '600' },
 
   // Cards
   card: {
-    backgroundColor: Colors.amazonNavy,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 12,
+    backgroundColor: Colors.amazonNavy, borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: Colors.border, gap: 12,
   },
   cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
-  cardTitle: {
-    color: Colors.white,
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
+  cardTitle: { color: Colors.white, fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
 
   // Rows
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
   },
   rowLabel: { color: Colors.lightGray, fontSize: 14, flex: 1 },
   valueText: { color: Colors.gray, fontSize: 13 },
 
   // Inputs
   input: {
-    backgroundColor: Colors.amazonDark,
-    color: Colors.white,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    flex: 1,
+    backgroundColor: Colors.amazonDark, color: Colors.white, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 8, fontSize: 14,
+    borderWidth: 1, borderColor: Colors.border, flex: 1,
   },
   inputSmall: { maxWidth: 100, flex: undefined },
 
   // Buttons
   primaryBtn: {
-    backgroundColor: Colors.alexaBlue,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
+    backgroundColor: Colors.alexaBlue, borderRadius: 12,
+    paddingVertical: 12, paddingHorizontal: 20,
+    alignItems: 'center', justifyContent: 'center', flexDirection: 'row',
   },
-  primaryBtnText: {
-    color: Colors.amazonDark,
-    fontWeight: '700',
-    fontSize: 14,
-  },
+  primaryBtnText: { color: Colors.amazonDark, fontWeight: '700', fontSize: 14 },
   dangerBtn: {
-    borderColor: Colors.red,
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
+    borderColor: Colors.red, borderWidth: 1.5, borderRadius: 12, paddingVertical: 12, alignItems: 'center',
   },
   dangerBtnText: { color: Colors.red, fontWeight: '600', fontSize: 14 },
 
@@ -457,20 +664,10 @@ const styles = StyleSheet.create({
   hint: { color: Colors.gray, fontSize: 11, lineHeight: 16 },
 
   // Generation grid
-  genGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
+  genGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   genCard: {
-    backgroundColor: Colors.amazonDark,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    width: '47%',
-    alignItems: 'center',
-    gap: 4,
+    backgroundColor: Colors.amazonDark, borderRadius: 12, padding: 12,
+    borderWidth: 1.5, borderColor: Colors.border, width: '47%', alignItems: 'center', gap: 4,
   },
   genLabel: { color: Colors.white, fontSize: 13, fontWeight: '700', textAlign: 'center' },
   genDesc: { color: Colors.gray, fontSize: 11, textAlign: 'center' },
@@ -478,66 +675,96 @@ const styles = StyleSheet.create({
 
   // Background
   bgTypeTabs: {
-    flexDirection: 'row',
-    backgroundColor: Colors.amazonDark,
-    borderRadius: 10,
-    padding: 3,
-    gap: 2,
+    flexDirection: 'row', backgroundColor: Colors.amazonDark,
+    borderRadius: 10, padding: 3, gap: 2,
   },
-  bgTypeTab: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
+  bgTypeTab: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
   bgTypeTabActive: { backgroundColor: Colors.alexaBlue },
   bgTypeTabText: { color: Colors.gray, fontSize: 13, fontWeight: '600' },
   bgTypeTabTextActive: { color: Colors.amazonDark },
   subLabel: { color: Colors.gray, fontSize: 12, marginBottom: 8, fontWeight: '600' },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   colorSwatch: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+    width: 52, height: 52, borderRadius: 12, borderWidth: 2, borderColor: Colors.border,
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
   },
   gradientSwatch: {
-    width: 72,
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 72, height: 52, borderRadius: 12, borderWidth: 2, borderColor: Colors.border,
+    overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
   },
   imagePickerSection: { gap: 10 },
   imagePicked: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(29,185,84,0.12)',
-    padding: 10,
-    borderRadius: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(29,185,84,0.12)', padding: 10, borderRadius: 10,
   },
   imagePickedText: { color: Colors.green, fontSize: 13, fontWeight: '600' },
 
+  // Theme
+  unlockHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(170,68,255,0.1)', borderRadius: 10, padding: 10,
+    borderWidth: 1, borderColor: '#AA44FF33',
+  },
+  unlockHintText: { color: '#AA44FF', fontSize: 12, fontWeight: '600' },
+
+  // Preferences
+  premiumNote: { color: '#AA44FF', fontSize: 11 },
+
+  // Parental
+  lockedRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(170,68,255,0.1)', borderRadius: 12, padding: 14,
+    borderWidth: 1, borderColor: '#AA44FF33',
+  },
+  lockedRowText: { color: Colors.lightGray, fontSize: 13, flex: 1 },
+  kidModeActive: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(255,153,0,0.12)', padding: 10, borderRadius: 10,
+  },
+  kidModeText: { color: Colors.amazonOrange, fontSize: 12, fontWeight: '600' },
+  pinSection: { gap: 8 },
+  pinLabel: { color: Colors.lightGray, fontSize: 13 },
+  pinBtnRow: { flexDirection: 'row', gap: 8 },
+  pinBtn: {
+    backgroundColor: Colors.amazonDark, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  pinBtnDanger: { borderColor: `${Colors.red}44` },
+  pinBtnText: { color: Colors.lightGray, fontSize: 13, fontWeight: '600' },
+  pinInputRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  pinConfirmBtn: {
+    width: 42, height: 42, borderRadius: 10, backgroundColor: Colors.alexaBlue,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pinCancelBtn: {
+    width: 42, height: 42, borderRadius: 10, backgroundColor: Colors.amazonDark,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border,
+  },
+
+  // Sleep schedule
+  scheduleGrid: { flexDirection: 'row', gap: 12 },
+  scheduleItem: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: Colors.amazonDark, borderRadius: 10, padding: 10,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  scheduleLabel: { color: Colors.lightGray, fontSize: 12, fontWeight: '600' },
+  timeInput: {
+    flex: 1, color: Colors.white, fontSize: 15, fontWeight: '700', textAlign: 'center',
+  },
+
+  // Shopping
+  shopDesc: { color: Colors.lightGray, fontSize: 13, lineHeight: 18 },
+  affiliateDisclosure: { color: Colors.gray, fontSize: 10, lineHeight: 14 },
+
+  // Restore
+  restoreBtn: { alignItems: 'center', paddingVertical: 4 },
+  restoreBtnText: { color: Colors.gray, fontSize: 13 },
+
   // Widget
   widgetInfo: {
-    flexDirection: 'row',
-    gap: 10,
-    backgroundColor: 'rgba(0,202,255,0.1)',
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'flex-start',
+    flexDirection: 'row', gap: 10, backgroundColor: 'rgba(0,202,255,0.1)',
+    padding: 12, borderRadius: 10, alignItems: 'flex-start',
   },
   widgetInfoText: { color: Colors.lightGray, fontSize: 13, flex: 1, lineHeight: 18 },
   widgetSteps: { gap: 6 },
