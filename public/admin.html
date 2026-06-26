@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Echo Remote · Admin</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0D1117; --surface: #161B22; --border: #30363D;
+    --text: #E6EDF3; --muted: #8B949E; --orange: #FF9900;
+    --blue: #00CAFF; --green: #1DB954; --red: #E8272C;
+    --purple: #AA44FF; --radius: 10px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+  /* ── Login ── */
+  #login { display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px; }
+  .login-card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 40px; width: 100%; max-width: 380px; text-align: center; }
+  .login-logo { font-size: 40px; margin-bottom: 8px; }
+  .login-card h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .login-card p { color: var(--muted); margin-bottom: 28px; font-size: 13px; }
+  .login-card input { width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 16px; color: var(--text); font-size: 15px;
+    margin-bottom: 12px; outline: none; }
+  .login-card input:focus { border-color: var(--blue); }
+  .btn-primary { width: 100%; background: var(--blue); color: #000; border: none;
+    border-radius: var(--radius); padding: 12px; font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: opacity 0.15s; }
+  .btn-primary:hover { opacity: 0.85; }
+  #login-error { color: var(--red); font-size: 12px; margin-top: 8px; display: none; }
+
+  /* ── App shell ── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; }
+  .logo { font-size: 20px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .logo span { color: var(--blue); }
+  .badge { background: var(--purple); color: #fff; font-size: 10px; font-weight: 700;
+    padding: 2px 6px; border-radius: 6px; letter-spacing: 0.5px; }
+  header .spacer { flex: 1; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted);
+    border-radius: var(--radius); padding: 6px 14px; font-size: 13px; cursor: pointer; }
+  .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+  main { padding: 24px; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+  /* ── Stats ── */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+  .stat-label { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .stat-value { font-size: 28px; font-weight: 800; }
+
+  /* ── Toolbar ── */
+  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+  .toolbar h2 { font-size: 18px; font-weight: 700; }
+  .btn-create { background: var(--orange); color: #000; border: none; border-radius: var(--radius);
+    padding: 9px 18px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .btn-create:hover { opacity: 0.85; }
+
+  /* ── Table ── */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 12px 16px; font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.03); }
+
+  .code-badge { font-family: monospace; background: rgba(0,202,255,0.12); color: var(--blue);
+    border-radius: 6px; padding: 3px 9px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; }
+  .type-chip { border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 600; }
+  .type-free_premium { background: rgba(29,185,84,0.15); color: var(--green); }
+  .type-trial_days { background: rgba(0,202,255,0.15); color: var(--blue); }
+  .type-percent_off { background: rgba(255,153,0,0.15); color: var(--orange); }
+
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .status-active .status-dot { background: var(--green); }
+  .status-inactive .status-dot { background: var(--muted); }
+  .status-expired .status-dot { background: var(--red); }
+  .status-full .status-dot { background: var(--orange); }
+
+  .actions { display: flex; gap: 8px; }
+  .btn-sm { border: 1px solid var(--border); background: transparent; color: var(--text);
+    border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
+  .btn-sm:hover { background: var(--border); }
+  .btn-sm.danger { color: var(--red); border-color: rgba(232,39,44,0.3); }
+  .btn-sm.danger:hover { background: rgba(232,39,44,0.1); }
+  .btn-copy { color: var(--muted); }
+  .btn-copy:hover { color: var(--text); }
+
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty h3 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
+
+  /* ── Modal ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    z-index: 200; backdrop-filter: blur(4px); }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    width: 100%; max-width: 480px; padding: 28px; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .modal-header h2 { font-size: 18px; font-weight: 700; }
+  .btn-close { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; }
+  .btn-close:hover { color: var(--text); }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .field input, .field select, .field textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 14px; color: var(--text); font-size: 14px; outline: none; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); }
+  .field select option { background: var(--surface); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+  .btn-cancel { background: transparent; border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--radius); padding: 10px 20px; font-size: 14px; cursor: pointer; }
+  .btn-save { background: var(--orange); color: #000; border: none;
+    border-radius: var(--radius); padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .btn-save:hover { opacity: 0.85; }
+
+  /* ── Confirm dialog ── */
+  .confirm-modal { max-width: 360px; }
+  .confirm-modal p { color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+  .btn-delete { background: var(--red); color: #fff; border: none;
+    border-radius: var(--radius); padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer; }
+
+  /* ── Toast ── */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px;
+    font-size: 14px; font-weight: 600; z-index: 999; transform: translateY(80px);
+    opacity: 0; transition: all 0.25s; display: flex; align-items: center; gap: 8px; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  #value-field { display: none; }
+  .hidden { display: none !important; }
+  .loading { opacity: 0.5; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<!-- ── Login ─────────────────────────────────────────────── -->
+<div id="login">
+  <div class="login-card">
+    <div class="login-logo">🎛️</div>
+    <h1>Echo Remote Admin</h1>
+    <p>Sign in to manage promotions and coupons</p>
+    <input type="password" id="pw-input" placeholder="Admin password" onkeydown="if(event.key==='Enter')doLogin()" />
+    <button class="btn-primary" onclick="doLogin()">Sign In</button>
+    <div id="login-error">Incorrect password. Please try again.</div>
+  </div>
+</div>
+
+<!-- ── App ───────────────────────────────────────────────── -->
+<div id="app">
+  <header>
+    <div class="logo">🎛️ Echo Remote <span>Admin</span> <span class="badge">BETA</span></div>
+    <div class="spacer"></div>
+    <button class="btn-ghost" onclick="logout()">Sign Out</button>
+  </header>
+
+  <main>
+    <!-- Stats -->
+    <div class="stats" id="stats">
+      <div class="stat-card"><div class="stat-label">Total Codes</div><div class="stat-value" id="stat-total">–</div></div>
+      <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value" style="color:var(--green)" id="stat-active">–</div></div>
+      <div class="stat-card"><div class="stat-label">Expired / Used Up</div><div class="stat-value" style="color:var(--red)" id="stat-dead">–</div></div>
+      <div class="stat-card"><div class="stat-label">Total Redemptions</div><div class="stat-value" style="color:var(--orange)" id="stat-uses">–</div></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <h2>Promotions &amp; Coupons</h2>
+      <button class="btn-create" onclick="openCreate()">＋ New Promotion</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Type</th>
+            <th>Value</th>
+            <th>Uses</th>
+            <th>Expires</th>
+            <th>Status</th>
+            <th>Note</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="promo-table">
+          <tr><td colspan="8" class="empty"><h3>Loading...</h3></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- ── Create/Edit Modal ─────────────────────────────────── -->
+<div class="modal-overlay hidden" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">New Promotion</h2>
+      <button class="btn-close" onclick="closeModal()">&times;</button>
+    </div>
+
+    <div class="field">
+      <label>Promo Code</label>
+      <input type="text" id="f-code" placeholder="e.g. LAUNCH50" style="text-transform:uppercase;font-family:monospace;font-size:16px;font-weight:700" />
+      <div class="hint">Letters and numbers only. Will be stored in uppercase.</div>
+    </div>
+
+    <div class="field">
+      <label>Type</label>
+      <select id="f-type" onchange="onTypeChange()">
+        <option value="free_premium">Free Premium — unlock all features instantly</option>
+        <option value="trial_days">Free Trial — unlock for N days</option>
+        <option value="percent_off">Percent Off — discount on purchase</option>
+      </select>
+    </div>
+
+    <div class="field hidden" id="value-field">
+      <label id="value-label">Value</label>
+      <input type="number" id="f-value" placeholder="0" min="0" />
+      <div class="hint" id="value-hint"></div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Max Uses</label>
+        <input type="number" id="f-max-uses" placeholder="Leave blank for unlimited" min="1" />
+      </div>
+      <div class="field">
+        <label>Expires On</label>
+        <input type="date" id="f-expires" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Note (internal)</label>
+      <input type="text" id="f-note" placeholder="e.g. Launch week giveaway" />
+    </div>
+
+    <div class="field" id="active-field" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="f-active" checked style="width:auto;accent-color:var(--green)" />
+      <label for="f-active" style="text-transform:none;letter-spacing:0;margin:0;cursor:pointer">Active</label>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="savePromo()">Save Promotion</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete Confirm ────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="delete-modal">
+  <div class="modal confirm-modal">
+    <div class="modal-header">
+      <h2>Delete Promotion?</h2>
+      <button class="btn-close" onclick="closeDelete()">&times;</button>
+    </div>
+    <p>This will permanently delete the code <strong id="delete-code"></strong>. This action cannot be undone.</p>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeDelete()">Cancel</button>
+      <button class="btn-delete" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/api/admin/promotions';
+let token = '';
+let promos = [];
+let editingId = null;
+let deletingId = null;
+
+// ── Auth ─────────────────────────────────────────────────
+function doLogin() {
+  const pw = document.getElementById('pw-input').value;
+  if (!pw) return;
+  token = pw;
+  fetchPromos().then(ok => {
+    if (ok) {
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      localStorage.setItem('admin_token', btoa(pw));
+    } else {
+      token = '';
+      document.getElementById('login-error').style.display = 'block';
+    }
+  });
+}
+
+function logout() {
+  token = '';
+  localStorage.removeItem('admin_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('pw-input').value = '';
+}
+
+// Auto-login from storage
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('admin_token');
+  if (saved) {
+    try {
+      token = atob(saved);
+      fetchPromos().then(ok => {
+        if (ok) {
+          document.getElementById('login').style.display = 'none';
+          document.getElementById('app').style.display = 'flex';
+        } else {
+          localStorage.removeItem('admin_token');
+        }
+      });
+    } catch {}
+  }
+});
+
+// ── API ──────────────────────────────────────────────────
+async function api(method, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API, opts);
+  return { ok: r.ok, status: r.status, data: await r.json().catch(() => null) };
+}
+
+async function fetchPromos() {
+  try {
+    const r = await fetch(API, { headers: { Authorization: `Bearer ${token}` } });
+    if (r.status === 401) return false;
+    promos = await r.json();
+    renderTable();
+    renderStats();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ── Stats ────────────────────────────────────────────────
+function promoStatus(p) {
+  if (!p.active) return 'inactive';
+  if (p.expiresAt && new Date(p.expiresAt) < new Date()) return 'expired';
+  if (p.maxUses !== null && p.usedCount >= p.maxUses) return 'full';
+  return 'active';
+}
+
+function renderStats() {
+  const active = promos.filter(p => promoStatus(p) === 'active').length;
+  const dead = promos.filter(p => ['expired','full','inactive'].includes(promoStatus(p))).length;
+  const uses = promos.reduce((s, p) => s + (p.usedCount || 0), 0);
+  document.getElementById('stat-total').textContent = promos.length;
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('stat-dead').textContent = dead;
+  document.getElementById('stat-uses').textContent = uses;
+}
+
+// ── Table ────────────────────────────────────────────────
+function typeLabel(type, value) {
+  if (type === 'free_premium') return 'Free Premium';
+  if (type === 'trial_days') return `${value}d Trial`;
+  if (type === 'percent_off') return `${value}% Off`;
+  return type;
+}
+
+function statusLabel(p) {
+  const s = promoStatus(p);
+  const labels = { active:'Active', inactive:'Inactive', expired:'Expired', full:'Limit Reached' };
+  return `<span class="status-${s}"><span class="status-dot"></span>${labels[s]}</span>`;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '<span style="color:var(--muted)">Never</span>';
+  return new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+function renderTable() {
+  const tbody = document.getElementById('promo-table');
+  if (!promos.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">
+      <h3>No promotions yet</h3>
+      <p>Click "＋ New Promotion" to create your first coupon code.</p>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = promos.slice().reverse().map(p => `
+    <tr>
+      <td>
+        <span class="code-badge">${p.code}</span>
+        <button class="btn-sm btn-copy" title="Copy code" onclick="copyCode('${p.code}')" style="border:none;padding:4px 6px;margin-left:4px">⧉</button>
+      </td>
+      <td><span class="type-chip type-${p.type}">${typeLabel(p.type, p.value)}</span></td>
+      <td style="color:var(--orange);font-weight:700">${p.type === 'free_premium' ? '—' : p.type === 'trial_days' ? `${p.value} days` : `${p.value}%`}</td>
+      <td>${p.usedCount}${p.maxUses !== null ? ` / ${p.maxUses}` : ' / ∞'}</td>
+      <td>${fmtDate(p.expiresAt)}</td>
+      <td>${statusLabel(p)}</td>
+      <td style="color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.note || '—'}</td>
+      <td>
+        <div class="actions">
+          <button class="btn-sm" onclick="openEdit('${p.id}')">Edit</button>
+          <button class="btn-sm danger" onclick="openDelete('${p.id}','${p.code}')">Delete</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function copyCode(code) {
+  navigator.clipboard.writeText(code).then(() => toast(`Copied: ${code}`, 'success'));
+}
+
+// ── Create / Edit ────────────────────────────────────────
+function onTypeChange() {
+  const type = document.getElementById('f-type').value;
+  const vf = document.getElementById('value-field');
+  const vl = document.getElementById('value-label');
+  const vh = document.getElementById('value-hint');
+  if (type === 'free_premium') {
+    vf.classList.add('hidden');
+  } else {
+    vf.classList.remove('hidden');
+    if (type === 'trial_days') {
+      vl.textContent = 'Number of Days';
+      vh.textContent = 'How many days of free premium access.';
+      document.getElementById('f-value').placeholder = 'e.g. 7';
+    } else {
+      vl.textContent = 'Discount Percent';
+      vh.textContent = 'Enter a number between 1–100.';
+      document.getElementById('f-value').placeholder = 'e.g. 50';
+    }
+  }
+}
+
+function openCreate() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'New Promotion';
+  document.getElementById('f-code').value = '';
+  document.getElementById('f-code').disabled = false;
+  document.getElementById('f-type').value = 'free_premium';
+  document.getElementById('f-value').value = '';
+  document.getElementById('f-max-uses').value = '';
+  document.getElementById('f-expires').value = '';
+  document.getElementById('f-note').value = '';
+  document.getElementById('f-active').checked = true;
+  onTypeChange();
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function openEdit(id) {
+  const p = promos.find(x => x.id === id);
+  if (!p) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit Promotion';
+  document.getElementById('f-code').value = p.code;
+  document.getElementById('f-code').disabled = true;
+  document.getElementById('f-type').value = p.type;
+  document.getElementById('f-value').value = p.value || '';
+  document.getElementById('f-max-uses').value = p.maxUses ?? '';
+  document.getElementById('f-expires').value = p.expiresAt ? p.expiresAt.substring(0,10) : '';
+  document.getElementById('f-note').value = p.note || '';
+  document.getElementById('f-active').checked = p.active;
+  onTypeChange();
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function closeModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+
+async function savePromo() {
+  const code = document.getElementById('f-code').value.toUpperCase().replace(/\s/g,'');
+  const type = document.getElementById('f-type').value;
+  const value = Number(document.getElementById('f-value').value || 0);
+  const maxUses = document.getElementById('f-max-uses').value ? Number(document.getElementById('f-max-uses').value) : null;
+  const expiresVal = document.getElementById('f-expires').value;
+  const expiresAt = expiresVal ? new Date(expiresVal).toISOString() : null;
+  const note = document.getElementById('f-note').value;
+  const active = document.getElementById('f-active').checked;
+
+  if (!code) return toast('Code is required', 'error');
+  if (type !== 'free_premium' && !value) return toast('Value is required for this type', 'error');
+
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+
+  const body = { type, value, maxUses, expiresAt, note, active };
+  let result;
+  if (editingId) {
+    result = await api('PUT', { id: editingId, ...body });
+  } else {
+    result = await api('POST', { code, ...body });
+  }
+
+  btn.textContent = 'Save Promotion'; btn.disabled = false;
+
+  if (result.ok) {
+    closeModal();
+    await fetchPromos();
+    toast(editingId ? 'Promotion updated' : `Code "${code}" created!`, 'success');
+  } else {
+    toast(result.data?.error ?? 'Something went wrong', 'error');
+  }
+}
+
+// ── Delete ───────────────────────────────────────────────
+function openDelete(id, code) {
+  deletingId = id;
+  document.getElementById('delete-code').textContent = code;
+  document.getElementById('delete-modal').classList.remove('hidden');
+}
+function closeDelete() { document.getElementById('delete-modal').classList.add('hidden'); }
+
+async function confirmDelete() {
+  const btn = document.querySelector('.btn-delete');
+  btn.textContent = 'Deleting…'; btn.disabled = true;
+  const result = await api('DELETE', { id: deletingId });
+  btn.textContent = 'Delete'; btn.disabled = false;
+  if (result.ok) {
+    closeDelete();
+    await fetchPromos();
+    toast('Promotion deleted', 'success');
+  } else {
+    toast('Failed to delete', 'error');
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = (type === 'success' ? '✓ ' : '✕ ') + msg;
+  el.className = `toast ${type} show`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// Close modals on overlay click
+document.getElementById('edit-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+document.getElementById('delete-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeDelete(); });
+</script>
+</body>
+</html>

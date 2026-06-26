@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity,
-  TouchableWithoutFeedback, ActivityIndicator, Alert,
+  TouchableWithoutFeedback, ActivityIndicator, Alert, TextInput,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,8 +32,10 @@ const FEATURE_LIST = [
 ];
 
 export function PremiumGate({ visible, onClose, featureName }: Props) {
-  const { buyLifetime, buyAnnual, buyMonthly, restore } = usePremium();
-  const [loading, setLoading] = useState<'lifetime' | 'annual' | 'monthly' | 'restore' | null>(null);
+  const { buyLifetime, buyAnnual, buyMonthly, restore, setPremium } = usePremium();
+  const [loading, setLoading] = useState<'lifetime' | 'annual' | 'monthly' | 'promo' | 'restore' | null>(null);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoError, setPromoError] = useState('');
 
   const unlockAlert = () =>
     Alert.alert('Welcome to Premium!', 'All features are now unlocked.', [
@@ -59,6 +61,32 @@ export function PremiumGate({ visible, onClose, featureName }: Props) {
     const ok = await buyMonthly();
     setLoading(null);
     if (ok) unlockAlert();
+  };
+
+  const handlePromo = async () => {
+    if (!promoCode.trim()) return;
+    setPromoError('');
+    setLoading('promo');
+    try {
+      const res = await fetch('/api/validate-promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoCode.trim() }),
+      });
+      const data = await res.json();
+      setLoading(null);
+      if (data.valid) {
+        await setPremium(true);
+        Alert.alert('Code Applied!', data.message ?? 'Premium unlocked!', [
+          { text: "Let's Go!", onPress: onClose },
+        ]);
+      } else {
+        setPromoError(data.error ?? 'Invalid code');
+      }
+    } catch {
+      setLoading(null);
+      setPromoError('Could not connect. Try again.');
+    }
   };
 
   const handleRestore = async () => {
@@ -169,6 +197,30 @@ export function PremiumGate({ visible, onClose, featureName }: Props) {
             </TouchableOpacity>
           </View>
 
+          {/* Promo code */}
+          <View style={styles.promoRow}>
+            <TextInput
+              value={promoCode}
+              onChangeText={t => { setPromoCode(t.toUpperCase()); setPromoError(''); }}
+              style={styles.promoInput}
+              placeholder="Have a promo code?"
+              placeholderTextColor={Colors.gray}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+            <TouchableOpacity
+              onPress={handlePromo}
+              style={styles.promoBtn}
+              activeOpacity={0.85}
+              disabled={loading !== null}
+            >
+              {loading === 'promo'
+                ? <ActivityIndicator size="small" color={Colors.amazonDark} />
+                : <Text style={styles.promoBtnText}>Apply</Text>}
+            </TouchableOpacity>
+          </View>
+          {promoError ? <Text style={styles.promoError}>{promoError}</Text> : null}
+
           {/* Restore + close */}
           <View style={styles.footer}>
             <TouchableOpacity onPress={handleRestore} disabled={loading !== null}>
@@ -246,6 +298,23 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: { color: '#AA44FF', fontSize: 15, fontWeight: '700' },
   secondaryBtnSub: { color: Colors.gray, fontSize: 11 },
+
+  promoRow: {
+    flexDirection: 'row', gap: 8, alignItems: 'center',
+  },
+  promoInput: {
+    flex: 1, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 10, color: Colors.white,
+    fontSize: 13, fontWeight: '700', letterSpacing: 1,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+  },
+  promoBtn: {
+    backgroundColor: Colors.amazonOrange, borderRadius: 10,
+    paddingHorizontal: 16, paddingVertical: 10, minWidth: 64,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  promoBtnText: { color: Colors.amazonDark, fontSize: 13, fontWeight: '700' },
+  promoError: { color: Colors.red, fontSize: 12, marginTop: -4 },
 
   footer: {
     flexDirection: 'row',
