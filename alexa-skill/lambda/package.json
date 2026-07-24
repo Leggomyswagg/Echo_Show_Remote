@@ -1,0 +1,14 @@
+{
+  "name": "echo-show-remote-skill",
+  "version": "1.0.0",
+  "description": "Alexa Skill Lambda for the Echo Show Remote app",
+  "main": "index.js",
+  "scripts": {
+    "package": "zip -r ../dist/lambda.zip . -x '*.git*' -x 'node_modules/.cache/*'"
+  },
+  "dependencies": {
+    "ask-sdk-core": "^2.14.0",
+    "ask-sdk-model": "^1.86.0",
+    "aws-sdk": "^2.1691.0"
+  }
+}

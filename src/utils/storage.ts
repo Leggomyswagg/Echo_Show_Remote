@@ -13,9 +13,12 @@ const KEYS = {
   HAPTICS_ENABLED: 'haptics',
   CUSTOM_BUTTONS: 'custom_btns',
   LAST_CONNECTED: 'last_connected',
+  BACKEND_MODE: 'backend_mode',
+  ALEXA_USER_ID: 'alexa_user_id',
 };
 
 export type BackgroundType = 'color' | 'image' | 'gradient' | 'default';
+export type BackendMode = 'skill' | 'local';
 
 export interface AppSettings {
   backgroundType: BackgroundType;
@@ -26,6 +29,8 @@ export interface AppSettings {
   devicePort: string;
   echoGeneration: string;
   hapticsEnabled: boolean;
+  backendMode: BackendMode;
+  alexaUserId: string | null;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -37,6 +42,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   devicePort: '8080',
   echoGeneration: 'show10',
   hapticsEnabled: true,
+  backendMode: 'skill',
+  alexaUserId: null,
 };
 
 export const Storage = {
@@ -58,6 +65,8 @@ export const Storage = {
         devicePort: data[KEYS.DEVICE_PORT] ?? DEFAULT_SETTINGS.devicePort,
         echoGeneration: data[KEYS.ECHO_GENERATION] ?? DEFAULT_SETTINGS.echoGeneration,
         hapticsEnabled: data[KEYS.HAPTICS_ENABLED] !== 'false',
+        backendMode: (data[KEYS.BACKEND_MODE] as BackendMode) ?? DEFAULT_SETTINGS.backendMode,
+        alexaUserId: data[KEYS.ALEXA_USER_ID] || null,
       };
     } catch {
       return DEFAULT_SETTINGS;
@@ -83,6 +92,10 @@ export const Storage = {
         pairs.push([KEYS.ECHO_GENERATION, settings.echoGeneration]);
       if (settings.hapticsEnabled !== undefined)
         pairs.push([KEYS.HAPTICS_ENABLED, String(settings.hapticsEnabled)]);
+      if (settings.backendMode !== undefined)
+        pairs.push([KEYS.BACKEND_MODE, settings.backendMode]);
+      if (settings.alexaUserId !== undefined)
+        pairs.push([KEYS.ALEXA_USER_ID, settings.alexaUserId ?? '']);
       await AsyncStorage.multiSet(pairs);
     } catch { /* ignore */ }
   },

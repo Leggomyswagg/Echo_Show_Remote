@@ -15,31 +15,73 @@ export interface CommandResult {
   message?: string;
 }
 
+export type BackendMode = 'skill' | 'local';
+
+// Default cloud endpoint — override via constructor for staging/self-hosted
+const DEFAULT_CLOUD_URL = 'https://echo-show-remote.vercel.app';
+
 export class EchoControlClient {
+  private mode: BackendMode;
   private baseUrl: string;
+  private cloudUrl: string;
+  private alexaUserId: string | null;
   private timeout = 3000;
 
-  constructor(ip: string, port: string) {
-    this.baseUrl = `http://${ip}:${port}`;
+  constructor(opts: {
+    ip?: string;
+    port?: string;
+    mode?: BackendMode;
+    cloudUrl?: string;
+    alexaUserId?: string | null;
+  } = {}) {
+    this.mode = opts.mode ?? 'skill';
+    this.baseUrl = `http://${opts.ip ?? '192.168.1.100'}:${opts.port ?? '8080'}`;
+    this.cloudUrl = opts.cloudUrl ?? DEFAULT_CLOUD_URL;
+    this.alexaUserId = opts.alexaUserId ?? null;
   }
 
   async sendCommand(command: EchoCommand, payload?: Record<string, unknown>): Promise<CommandResult> {
+    if (this.mode === 'skill') return this.sendViaSkill(command, payload);
+    return this.sendViaLocal(command, payload);
+  }
+
+  private async sendViaSkill(command: EchoCommand, payload?: Record<string, unknown>): Promise<CommandResult> {
+    if (!this.alexaUserId) {
+      return { success: false, message: 'Alexa account not linked' };
+    }
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(`${this.cloudUrl}/api/alexa/send-command`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: this.alexaUserId, command, ...payload }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (res.ok) return { success: true };
+      const data = await res.json().catch(() => ({}));
+      return { success: false, message: data.error ?? `HTTP ${res.status}` };
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return { success: false, message: 'Cloud timeout' };
+      }
+      return { success: false, message: 'Cloud unreachable' };
+    }
+  }
+
+  private async sendViaLocal(command: EchoCommand, payload?: Record<string, unknown>): Promise<CommandResult> {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeout);
-
       const response = await fetch(`${this.baseUrl}/command`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command, ...payload }),
         signal: controller.signal,
       });
-
       clearTimeout(timer);
-
-      if (response.ok) {
-        return { success: true };
-      }
+      if (response.ok) return { success: true };
       return { success: false, message: `HTTP ${response.status}` };
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') {
@@ -50,10 +92,26 @@ export class EchoControlClient {
   }
 
   async sendAlexaText(text: string): Promise<CommandResult> {
+    if (this.mode === 'skill') {
+      if (!this.alexaUserId) return { success: false, message: 'Alexa account not linked' };
+      try {
+        const res = await fetch(`${this.cloudUrl}/api/alexa/send-command`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: this.alexaUserId, command: 'alexa_text', text }),
+        });
+        if (res.ok) return { success: true };
+        const data = await res.json().catch(() => ({}));
+        return { success: false, message: data.error ?? `HTTP ${res.status}` };
+      } catch { return { success: false, message: 'Cloud unreachable' }; }
+    }
     return this.sendCommand('alexa_text', { text });
   }
 
   async ping(): Promise<boolean> {
+    if (this.mode === 'skill') {
+      return this.alexaUserId !== null;
+    }
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 2000);

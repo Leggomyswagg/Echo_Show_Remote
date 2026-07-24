@@ -1,0 +1,91 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "echo show remote",
+      "intents": [
+        { "name": "AMAZON.HelpIntent", "samples": [] },
+        { "name": "AMAZON.StopIntent", "samples": [] },
+        { "name": "AMAZON.CancelIntent", "samples": [] },
+        { "name": "AMAZON.FallbackIntent", "samples": [] },
+        {
+          "name": "PlayIntent",
+          "samples": ["play", "resume", "start playing", "play music"]
+        },
+        {
+          "name": "PauseIntent",
+          "samples": ["pause", "stop the music", "hold"]
+        },
+        {
+          "name": "NextIntent",
+          "samples": ["next", "next song", "skip", "skip forward"]
+        },
+        {
+          "name": "PreviousIntent",
+          "samples": ["previous", "previous song", "back", "skip back"]
+        },
+        {
+          "name": "VolumeUpIntent",
+          "samples": ["volume up", "louder", "turn it up"]
+        },
+        {
+          "name": "VolumeDownIntent",
+          "samples": ["volume down", "quieter", "turn it down"]
+        },
+        {
+          "name": "MuteIntent",
+          "samples": ["mute", "silence", "quiet"]
+        },
+        {
+          "name": "SetVolumeIntent",
+          "slots": [{ "name": "Level", "type": "AMAZON.NUMBER" }],
+          "samples": ["set volume to {Level}", "volume {Level}"]
+        },
+        {
+          "name": "DoNotDisturbIntent",
+          "samples": ["do not disturb", "enable do not disturb", "quiet mode"]
+        },
+        {
+          "name": "RunRoutineIntent",
+          "slots": [{ "name": "Routine", "type": "RoutineType" }],
+          "samples": ["run {Routine}", "start {Routine}", "activate {Routine}"]
+        },
+        {
+          "name": "SmartHomeIntent",
+          "slots": [
+            { "name": "Action", "type": "SmartHomeAction" },
+            { "name": "Device", "type": "AMAZON.SearchQuery" }
+          ],
+          "samples": ["{Action} {Device}", "{Action} the {Device}"]
+        },
+        {
+          "name": "PassthroughIntent",
+          "slots": [{ "name": "Command", "type": "AMAZON.SearchQuery" }],
+          "samples": ["{Command}"]
+        }
+      ],
+      "types": [
+        {
+          "name": "RoutineType",
+          "values": [
+            { "name": { "value": "good morning" } },
+            { "name": { "value": "good night" } },
+            { "name": { "value": "movie night" } },
+            { "name": { "value": "bedtime" } },
+            { "name": { "value": "away mode" } },
+            { "name": { "value": "party mode" } },
+            { "name": { "value": "focus mode" } }
+          ]
+        },
+        {
+          "name": "SmartHomeAction",
+          "values": [
+            { "name": { "value": "turn on" } },
+            { "name": { "value": "turn off" } },
+            { "name": { "value": "dim" } },
+            { "name": { "value": "brighten" } }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -32,17 +32,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     devicePort: '8080',
     echoGeneration: 'show10',
     hapticsEnabled: true,
+    backendMode: 'skill',
+    alexaUserId: null,
   });
   const [isConnected, setIsConnected] = useState(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [client, setClient] = useState<EchoControlClient>(
-    () => new EchoControlClient('192.168.1.100', '8080')
+    () => new EchoControlClient({ mode: 'skill' })
   );
 
   useEffect(() => {
     Storage.getSettings().then(s => {
       setSettings(s);
-      setClient(new EchoControlClient(s.deviceIp, s.devicePort));
+      setClient(new EchoControlClient({
+        ip: s.deviceIp,
+        port: s.devicePort,
+        mode: s.backendMode,
+        alexaUserId: s.alexaUserId,
+      }));
     });
     refreshHistory();
   }, []);
@@ -51,8 +58,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const next = { ...settings, ...patch };
     setSettings(next);
     await Storage.saveSettings(patch);
-    if (patch.deviceIp !== undefined || patch.devicePort !== undefined) {
-      setClient(new EchoControlClient(next.deviceIp, next.devicePort));
+    if (
+      patch.deviceIp !== undefined || patch.devicePort !== undefined
+      || patch.backendMode !== undefined || patch.alexaUserId !== undefined
+    ) {
+      setClient(new EchoControlClient({
+        ip: next.deviceIp,
+        port: next.devicePort,
+        mode: next.backendMode,
+        alexaUserId: next.alexaUserId,
+      }));
     }
   }, [settings]);
 

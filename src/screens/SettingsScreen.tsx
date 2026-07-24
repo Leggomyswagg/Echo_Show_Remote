@@ -21,6 +21,7 @@ import { Colors } from '../utils/colors';
 import { BackgroundView } from '../components/common/BackgroundView';
 import { ThemeSelector } from '../components/premium/ThemeSelector';
 import { PremiumGate } from '../components/premium/PremiumGate';
+import { LinkAlexaModal } from '../components/alexa/LinkAlexaModal';
 import { useApp } from '../context/AppContext';
 import { usePremium } from '../context/PremiumContext';
 import { Storage } from '../utils/storage';
@@ -63,6 +64,7 @@ export function SettingsScreen() {
   const [testing, setTesting] = useState(false);
   const [historyClearing, setHistoryClearing] = useState(false);
   const [gateVisible, setGateVisible] = useState(false);
+  const [linkAlexaVisible, setLinkAlexaVisible] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinMode, setPinMode] = useState<'set' | 'remove' | null>(null);
 
@@ -204,8 +206,54 @@ export function SettingsScreen() {
               )}
             </TouchableOpacity>
             <Text style={styles.hint}>
-              Install the Echo Show Remote companion server on a device on your local network.
+              For direct local control, install the companion server on a device on your local network.
             </Text>
+          </SectionCard>
+
+          {/* ── Alexa Skill (cloud) ───────────────────────────── */}
+          <SectionCard title="Alexa Skill" icon="microphone">
+            <View style={styles.alexaStatusRow}>
+              <View style={styles.alexaBadge}>
+                <MaterialCommunityIcons
+                  name={settings.alexaUserId ? 'check-circle' : 'alert-circle-outline'}
+                  size={16}
+                  color={settings.alexaUserId ? Colors.green : Colors.amazonOrange}
+                />
+                <Text style={[styles.alexaStatusText, {
+                  color: settings.alexaUserId ? Colors.green : Colors.amazonOrange
+                }]}>
+                  {settings.alexaUserId ? 'Linked' : 'Not linked'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setLinkAlexaVisible(true)}
+                style={styles.alexaLinkBtn}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.alexaLinkBtnText}>
+                  {settings.alexaUserId ? 'Manage' : 'Link Alexa'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.hint}>
+              The recommended way to control your Echo devices from anywhere. Requires enabling the "Echo Show Remote" Skill in the Alexa app.
+            </Text>
+            <View style={styles.modeSwitch}>
+              <TouchableOpacity
+                onPress={() => updateSettings({ backendMode: 'skill' })}
+                style={[styles.modeChip, settings.backendMode === 'skill' && styles.modeChipActive]}
+              >
+                <MaterialCommunityIcons name="cloud" size={14} color={settings.backendMode === 'skill' ? Colors.amazonDark : Colors.gray} />
+                <Text style={[styles.modeChipText, settings.backendMode === 'skill' && styles.modeChipTextActive]}>Alexa Skill</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => updateSettings({ backendMode: 'local' })}
+                style={[styles.modeChip, settings.backendMode === 'local' && styles.modeChipActive]}
+              >
+                <MaterialCommunityIcons name="lan" size={14} color={settings.backendMode === 'local' ? Colors.amazonDark : Colors.gray} />
+                <Text style={[styles.modeChipText, settings.backendMode === 'local' && styles.modeChipTextActive]}>Local Server</Text>
+              </TouchableOpacity>
+            </View>
           </SectionCard>
 
           {/* ── Themes ───────────────────────────────────────────── */}
@@ -552,6 +600,7 @@ export function SettingsScreen() {
       </SafeAreaView>
 
       <PremiumGate visible={gateVisible} onClose={() => setGateVisible(false)} />
+      <LinkAlexaModal visible={linkAlexaVisible} onClose={() => setLinkAlexaVisible(false)} />
     </BackgroundView>
   );
 }
@@ -706,6 +755,35 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#AA44FF33',
   },
   unlockHintText: { color: '#AA44FF', fontSize: 12, fontWeight: '600' },
+
+  // Alexa Skill
+  alexaStatusRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: 12,
+  },
+  alexaBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: Colors.amazonDark, borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  alexaStatusText: { fontSize: 12, fontWeight: '700' },
+  alexaLinkBtn: {
+    backgroundColor: Colors.alexaBlue, borderRadius: 10,
+    paddingHorizontal: 16, paddingVertical: 8,
+  },
+  alexaLinkBtnText: { color: Colors.amazonDark, fontSize: 13, fontWeight: '700' },
+  modeSwitch: {
+    flexDirection: 'row', gap: 8, backgroundColor: Colors.amazonDark,
+    borderRadius: 10, padding: 4,
+  },
+  modeChip: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 5, paddingVertical: 8, borderRadius: 8,
+  },
+  modeChipActive: { backgroundColor: Colors.alexaBlue },
+  modeChipText: { color: Colors.gray, fontSize: 12, fontWeight: '600' },
+  modeChipTextActive: { color: Colors.amazonDark, fontWeight: '700' },
 
   // Preferences
   premiumNote: { color: '#AA44FF', fontSize: 11 },

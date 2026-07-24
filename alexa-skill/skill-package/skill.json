@@ -1,0 +1,61 @@
+{
+  "manifest": {
+    "manifestVersion": "1.0",
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "name": "Echo Show Remote",
+          "summary": "Companion skill for the Echo Show Remote app — control your Echo devices from your phone.",
+          "description": "Echo Show Remote gives you a full-featured smartphone remote for every Echo device. Enable this skill and link your account to unlock playback controls, volume, smart home routines, and text-based Alexa commands right from your phone.\n\nFeatures:\n• Play, pause, skip, and volume control from your phone\n• Trigger any Alexa routine you've created\n• Send text commands to Alexa without speaking\n• Works with every Echo Show, Echo Dot, and Echo device on your account",
+          "examplePhrases": [
+            "Alexa, open Echo Show Remote",
+            "Alexa, tell Echo Show Remote to play music",
+            "Alexa, ask Echo Show Remote for help"
+          ],
+          "keywords": ["remote", "echo show", "controller", "smart home", "alexa app"],
+          "smallIconUri": "https://echo-show-remote.vercel.app/skill-icon-108.png",
+          "largeIconUri": "https://echo-show-remote.vercel.app/skill-icon-512.png"
+        }
+      },
+      "isAvailableWorldwide": false,
+      "testingInstructions": "1. Enable the skill in the Alexa app.\n2. Complete account linking with any email/password (test account: test@example.com / test1234).\n3. Say 'Alexa, open Echo Show Remote'.\n4. From the companion phone app, tap any control — the command flows through this skill to your Echo device.",
+      "category": "SMART_HOME",
+      "distributionCountries": ["US", "CA", "GB", "AU", "IN"]
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "arn:aws:lambda:us-east-1:REPLACE_ACCOUNT_ID:function:echoRemoteSkill",
+          "sslCertificateType": "Trusted"
+        }
+      }
+    },
+    "permissions": [
+      { "name": "alexa::async_event:write" },
+      { "name": "alexa::devices:all:notifications:write" }
+    ],
+    "events": {
+      "endpoint": {
+        "uri": "arn:aws:lambda:us-east-1:REPLACE_ACCOUNT_ID:function:echoRemoteSkill"
+      },
+      "subscriptions": [
+        { "eventName": "SKILL_ENABLED" },
+        { "eventName": "SKILL_DISABLED" },
+        { "eventName": "SKILL_ACCOUNT_LINKED" }
+      ]
+    },
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": true,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false,
+      "locales": {
+        "en-US": {
+          "privacyPolicyUrl": "https://echo-show-remote.vercel.app/privacy",
+          "termsOfUseUrl": "https://echo-show-remote.vercel.app/terms"
+        }
+      }
+    }
+  }
+}
