@@ -15,7 +15,9 @@
     "submit:android": "eas submit --profile production-android --platform android",
     "submit:all": "eas submit --profile production-ios --platform ios && eas submit --profile production-android --platform android",
     "lint": "expo lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "skill:icons": "node scripts/generate-skill-icons.js",
+    "skill:deploy": "cd alexa-skill && ask deploy"
   },
   "dependencies": {
     "expo": "~51.0.28",
