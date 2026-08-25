@@ -1,0 +1,15 @@
+{
+  "name": "echo-show-remote-relay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LAN relay that turns Echo Show Remote commands into Alexa device-control commands.",
+  "main": "server.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "alexa-remote2": "^8.1.1",
+    "express": "^5.1.0"
+  }
+}
