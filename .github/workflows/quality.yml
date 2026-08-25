@@ -16,9 +16,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: relay/package.json
-      - run: npm install --package-lock=false
+          cache: false
+      - run: npm install --package-lock=false --no-audit --no-fund
       - run: node --check server.js
 
   app:
@@ -28,6 +27,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - run: npm install --package-lock=false
+          cache: false
+      - run: npm install --omit=optional --no-audit --no-fund
       - run: npx tsc --noEmit
+      - run: npx expo export --platform web
