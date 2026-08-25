@@ -14,20 +14,31 @@ The Alexa Proactive Events API is a notification mechanism; it is not a remote-c
 cd relay
 npm install
 cp .env.example .env
-npm start
 ```
 
 Node.js 20+ is required.
 
-## Authentication
+## Alexa authentication
+
+Generate the initial Alexa session data with the included setup helper:
+
+```bash
+npm run setup:alexa
+```
+
+Open the proxy URL printed by the helper, complete Amazon authentication, and copy the emitted `ALEXA_COOKIE_JSON` value into the relay secret store. Then start the relay:
+
+```bash
+npm start
+```
+
+Keep this JSON private. It represents authenticated access to the Amazon account used by the relay.
+
+## Relay authentication
 
 Set `RELAY_TOKEN` to a long random value. The mobile app sends it as `Authorization: Bearer <token>` when configured for a protected relay.
 
 If `RELAY_TOKEN` is empty, the relay is intentionally LAN-open for development only. Do not expose an unauthenticated relay to the internet.
-
-## Alexa authentication
-
-`ALEXA_COOKIE_JSON` must contain the cookie data accepted by `alexa-remote2`. The library's supported proxy flow can be used to obtain the initial cookie. After the initial authentication, persist the returned cookie data securely and use it on subsequent starts.
 
 Never commit the cookie, credentials, or token to Git.
 
