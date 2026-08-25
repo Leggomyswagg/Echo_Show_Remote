@@ -6,7 +6,8 @@
   "main": "server.js",
   "engines": { "node": ">=20" },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "setup:alexa": "node setup.js"
   },
   "dependencies": {
     "alexa-remote2": "^8.1.1",
