@@ -1,6 +1,6 @@
-// Dynamic config — extends app.json and conditionally adds native-only plugins.
-// expo-keep-awake has no config plugin and needs none.
-// @bam.tech/react-native-android-widget is Android/native only — excluded on web.
+// Dynamic config — keeps native-only settings out of the web export.
+// The Android widget and Google services configuration are intentionally
+// omitted from the web config so Expo can build cleanly on Vercel/CI.
 
 const isWeb = process.env.EXPO_PLATFORM === 'web' || process.env.VERCEL === '1';
 
@@ -25,8 +25,16 @@ module.exports = ({ config }) => {
         ],
       ];
 
+  const android = config.android
+    ? {
+        ...config.android,
+        ...(isWeb ? { googleServicesFile: undefined } : {}),
+      }
+    : config.android;
+
   return {
     ...config,
+    android,
     plugins: [...(config.plugins ?? []), ...nativePlugins],
   };
 };
