@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { kv } from '@vercel/kv';
+import { redis } from '../lib/redis';
 
 export interface Promotion {
   id: string;
   code: string;
   type: 'free_premium' | 'trial_days' | 'percent_off';
-  value: number;        // days for trial_days, % for percent_off, 0 for free_premium
+  value: number;
   maxUses: number | null;
   usedCount: number;
   expiresAt: string | null;
@@ -17,9 +17,10 @@ export interface Promotion {
 const PROMOTIONS_KEY = 'echo_remote:promotions';
 
 function cors(res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', process.env.APP_ORIGIN ?? '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Cache-Control', 'no-store');
 }
 
 function checkAuth(req: VercelRequest): boolean {
@@ -30,38 +31,36 @@ function checkAuth(req: VercelRequest): boolean {
 }
 
 async function getAll(): Promise<Promotion[]> {
-  try {
-    return (await kv.get<Promotion[]>(PROMOTIONS_KEY)) ?? [];
-  } catch {
-    return [];
-  }
+  if (!redis) return [];
+  return (await redis.get<Promotion[]>(PROMOTIONS_KEY)) ?? [];
 }
 
 async function saveAll(promos: Promotion[]): Promise<void> {
-  await kv.set(PROMOTIONS_KEY, promos);
+  if (!redis) throw new Error('Promotion storage is not configured');
+  await redis.set(PROMOTIONS_KEY, promos);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   cors(res);
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method === 'OPTIONS') return res.status(204).end();
   if (!checkAuth(req)) return res.status(401).json({ error: 'Unauthorized' });
+  if (!redis) return res.status(503).json({ error: 'Promotion storage is not configured' });
 
-  // ── GET: list all ────────────────────────────────────────────
   if (req.method === 'GET') {
-    const promos = await getAll();
-    return res.json(promos);
+    try {
+      return res.json(await getAll());
+    } catch {
+      return res.status(503).json({ error: 'Storage unavailable' });
+    }
   }
 
-  // ── POST: create ─────────────────────────────────────────────
   if (req.method === 'POST') {
     const body = req.body ?? {};
     const code = String(body.code ?? '').toUpperCase().replace(/\s/g, '');
-    if (!code) return res.status(400).json({ error: 'Code is required' });
+    if (!code || code.length > 64) return res.status(400).json({ error: 'Code is required' });
 
     const promos = await getAll();
-    if (promos.some(p => p.code === code)) {
-      return res.status(409).json({ error: 'Code already exists' });
-    }
+    if (promos.some(p => p.code === code)) return res.status(409).json({ error: 'Code already exists' });
 
     const promo: Promotion = {
       id: `promo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -80,7 +79,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(201).json(promo);
   }
 
-  // ── PUT: update ──────────────────────────────────────────────
   if (req.method === 'PUT') {
     const { id, ...updates } = req.body ?? {};
     if (!id) return res.status(400).json({ error: 'id required' });
@@ -95,7 +93,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json(promos[idx]);
   }
 
-  // ── DELETE ───────────────────────────────────────────────────
   if (req.method === 'DELETE') {
     const { id } = req.body ?? {};
     if (!id) return res.status(400).json({ error: 'id required' });
