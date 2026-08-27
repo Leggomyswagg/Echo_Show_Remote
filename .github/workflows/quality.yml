@@ -16,7 +16,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: false
       - run: npm install --package-lock=false --no-audit --no-fund
       - run: node --check server.js
 
@@ -27,7 +26,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: false
       - run: npm install --omit=optional --no-audit --no-fund
       - run: npx tsc --noEmit
       - run: npx expo export --platform web
