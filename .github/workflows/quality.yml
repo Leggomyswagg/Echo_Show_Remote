@@ -5,6 +5,10 @@ on:
     branches: ['**']
   pull_request:
 
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   relay:
     runs-on: ubuntu-latest
