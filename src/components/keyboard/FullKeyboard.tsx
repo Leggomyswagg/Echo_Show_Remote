@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  useRef,
 } from 'react-native';
 import { useHaptics } from '../../hooks/useHaptics';
 import { Colors } from '../../utils/colors';
@@ -74,7 +73,7 @@ function Key({ char, onPress, isShift, keyWidth = 34, keyHeight = 42 }: KeyProps
             height: keyHeight,
             backgroundColor: bgColor,
             minWidth: isSpecial ? undefined : keyWidth,
-          }
+          },
         ]}
         activeOpacity={0.7}
       >
@@ -101,10 +100,7 @@ export function FullKeyboard({ onInput, onEnter, compact = false }: FullKeyboard
   const rows = isNumbers ? NUMBER_ROWS : ROWS;
 
   const handleKey = useCallback((char: string) => {
-    if (char === 'SHIFT') {
-      setIsShift(s => !s);
-      return;
-    }
+    if (char === 'SHIFT') { setIsShift(s => !s); return; }
     if (char === '123') { setIsNumbers(true); return; }
     if (char === 'ABC') { setIsNumbers(false); return; }
     if (char === 'DEL') {
@@ -113,11 +109,7 @@ export function FullKeyboard({ onInput, onEnter, compact = false }: FullKeyboard
       onInput?.(next);
       return;
     }
-    if (char === 'ENTER') {
-      onEnter?.(text);
-      setText('');
-      return;
-    }
+    if (char === 'ENTER') { onEnter?.(text); setText(''); return; }
     if (char === 'SPACE') {
       const next = text + ' ';
       setText(next);
@@ -133,28 +125,16 @@ export function FullKeyboard({ onInput, onEnter, compact = false }: FullKeyboard
 
   return (
     <View style={styles.container}>
-      {/* Text display */}
       <View style={styles.display}>
         <Text style={styles.displayText} numberOfLines={1}>
           {text || <Text style={styles.placeholder}>Start typing...</Text>}
         </Text>
-        {text.length > 0 && (
-          <View style={styles.cursor} />
-        )}
+        {text.length > 0 && <View style={styles.cursor} />}
       </View>
-
-      {/* Keys */}
       {rows.map((row, ri) => (
         <View key={ri} style={styles.row}>
           {row.map(char => (
-            <Key
-              key={char}
-              char={char}
-              onPress={handleKey}
-              isShift={isShift}
-              keyWidth={keyWidth}
-              keyHeight={keyHeight}
-            />
+            <Key key={char} char={char} onPress={handleKey} isShift={isShift} keyWidth={keyWidth} keyHeight={keyHeight} />
           ))}
         </View>
       ))}
@@ -163,56 +143,12 @@ export function FullKeyboard({ onInput, onEnter, compact = false }: FullKeyboard
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.amazonNavy,
-    borderRadius: 16,
-    padding: 10,
-    gap: 6,
-  },
-  display: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.amazonDark,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginBottom: 4,
-    minHeight: 40,
-    borderWidth: 1,
-    borderColor: Colors.alexaBlue,
-  },
-  displayText: {
-    color: Colors.white,
-    fontSize: 15,
-    flex: 1,
-  },
-  placeholder: {
-    color: Colors.gray,
-    fontStyle: 'italic',
-  },
-  cursor: {
-    width: 2,
-    height: 18,
-    backgroundColor: Colors.alexaBlue,
-    marginLeft: 2,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 5,
-  },
-  key: {
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 3,
-  },
-  keyText: {
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
+  container: { backgroundColor: Colors.amazonNavy, borderRadius: 16, padding: 10, gap: 6 },
+  display: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.amazonDark, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, marginBottom: 4, minHeight: 40, borderWidth: 1, borderColor: Colors.alexaBlue },
+  displayText: { color: Colors.white, fontSize: 15, flex: 1 },
+  placeholder: { color: Colors.gray, fontStyle: 'italic' },
+  cursor: { width: 2, height: 18, backgroundColor: Colors.alexaBlue, marginLeft: 2 },
+  row: { flexDirection: 'row', justifyContent: 'center', gap: 5 },
+  key: { borderRadius: 8, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 2, elevation: 3 },
+  keyText: { fontWeight: '600', letterSpacing: 0.3 },
 });
