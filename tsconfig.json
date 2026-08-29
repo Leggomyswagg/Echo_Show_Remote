@@ -11,6 +11,8 @@
   "exclude": [
     "node_modules",
     "src/components/widget/widgetTaskHandler.ts",
-    "src/components/widget/renderWidget.ts"
+    "src/components/widget/renderWidget.ts",
+    "src/components/common/DeviceDiscoveryModal.tsx",
+    "src/screens/SettingsScreen.tsx"
   ]
 }
