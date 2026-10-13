@@ -42,7 +42,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   devicePort: '8080',
   echoGeneration: 'show10',
   hapticsEnabled: true,
-  backendMode: 'skill',
+  backendMode: 'local',
   alexaUserId: null,
 };
 

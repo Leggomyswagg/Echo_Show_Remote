@@ -20,6 +20,7 @@
     "submit:all": "eas submit --profile production-ios --platform ios && eas submit --profile production-android --platform android",
     "lint": "expo lint",
     "type-check": "tsc --noEmit",
+    "test": "node --test tests/*.test.js",
     "skill:icons": "node scripts/generate-skill-icons.js",
     "skill:deploy": "cd alexa-skill && ask deploy"
   },
@@ -35,6 +36,7 @@
     "expo-splash-screen": "~0.27.5",
     "expo-keep-awake": "~13.0.2",
     "expo-network": "~6.0.1",
+    "expo-secure-store": "~13.0.2",
     "@expo/vector-icons": "^14.0.2",
     "@react-navigation/native": "^6.1.17",
     "@react-navigation/bottom-tabs": "^6.5.20",
