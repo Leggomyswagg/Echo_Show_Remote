@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { isRelayAuthorized } from '../lib/relayAuth';
 
 const SUPPORTED_COMMANDS = new Set([
   'power', 'volume_up', 'volume_down', 'set_volume', 'mute',
@@ -23,6 +24,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!relayUrl) return res.status(503).json({ error: 'Relay service is not configured' });
   if (!process.env.RELAY_TOKEN) return res.status(503).json({ error: 'Relay authentication is not configured' });
 
+  if (!isRelayAuthorized(req.headers.authorization, process.env.RELAY_TOKEN)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const body = req.body ?? {};
   if (!body.command || typeof body.command !== 'string' || !SUPPORTED_COMMANDS.has(body.command)) {
     return res.status(400).json({ error: 'Unsupported command', supportedCommands: [...SUPPORTED_COMMANDS] });
@@ -44,6 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         deviceId: body.deviceId,
         text: body.text,
       }),
+      signal: AbortSignal.timeout(10000),
     });
 
     const text = await response.text();

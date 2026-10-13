@@ -5,7 +5,7 @@
 The repository's Quality workflow validates both components:
 
 - `relay`: Node syntax check.
-- `app`: Expo web export with the web-only Expo configuration.
+- `app`: TypeScript checks, mocked authentication/credential tests, and Expo web export with the web-only Expo configuration.
 
 Use the GitHub Actions Quality run as the release gate.
 
@@ -32,7 +32,7 @@ npm start
 Verify:
 
 ```bash
-curl http://127.0.0.1:8080/health
+curl --header "Authorization: Bearer $RELAY_TOKEN" http://127.0.0.1:8080/health
 ```
 
 The relay should report `ready: true` after Alexa authentication completes.
@@ -56,6 +56,13 @@ For cloud mode, set `EXPO_PUBLIC_API_URL` to the deployed Vercel origin. The mob
 
 For local mode, configure the relay host LAN IP, port 8080, and the same `RELAY_TOKEN`.
 
+Enter the relay token in Settings and use **Save & Test Connection**. Native
+apps keep it in the OS secure store; web keeps it in memory until refresh.
+Select **Local Relay** for LAN access or **Cloud Relay** for the Vercel gateway.
+The connection indicator requires an authenticated health response with
+`ready: true`. Cloud command URLs, including legacy aliases, reject callers
+without the matching bearer token.
+
 ## 5. Command expectations
 
 The current transport supports media, volume, stop, do-not-disturb, Alexa text commands, and speech. Unsupported touchscreen/navigation/app-launch commands are intentionally rejected. Do not market unsupported commands as working until a verified device-specific transport is implemented.
@@ -73,7 +80,7 @@ Run, in order:
 7. An unsupported command returns HTTP 400.
 8. An unauthenticated command returns HTTP 401.
 9. Excessive command requests return HTTP 429.
-10. Vercel web deployment loads the Expo app and `/api/relay/health` reports the relay state.
+10. Vercel web deployment loads the Expo app and `/api/relay/health`, called with the relay bearer token, reports the relay state.
 
 ## 7. Store release
 

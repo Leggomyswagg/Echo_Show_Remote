@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, Switch, TouchableOpacity,
   Alert, Platform, SafeAreaView, StatusBar, ActivityIndicator, Linking,
@@ -10,7 +10,6 @@ import { Colors } from '../utils/colors';
 import { BackgroundView } from '../components/common/BackgroundView';
 import { ThemeSelector } from '../components/premium/ThemeSelector';
 import { PremiumGate } from '../components/premium/PremiumGate';
-import { LinkAlexaModal } from '../components/alexa/LinkAlexaModal';
 import { useApp } from '../context/AppContext';
 import { usePremium } from '../context/PremiumContext';
 import { Storage } from '../utils/storage';
@@ -33,20 +32,31 @@ const AMAZON_DEALS_URL = 'https://www.amazon.com/deals?tag=echoremote-20';
 const AMAZON_ECHO_URL = 'https://www.amazon.com/s?k=amazon+echo&tag=echoremote-20';
 
 export function SettingsScreen() {
-  const { settings, updateSettings, isConnected, checkConnection } = useApp();
+  const { settings, updateSettings, relayToken, updateRelayToken, isConnected, checkConnection } = useApp();
   const { isPremium, restore, parentalPin, setParentalPin, kidModeActive, setKidMode, accessibilityMode, setAccessibilityMode, sleepSchedule, setSleepSchedule } = usePremium();
   const [ip, setIp] = useState(settings.deviceIp);
   const [port, setPort] = useState(settings.devicePort);
   const [testing, setTesting] = useState(false);
   const [historyClearing, setHistoryClearing] = useState(false);
   const [gateVisible, setGateVisible] = useState(false);
-  const [linkAlexaVisible, setLinkAlexaVisible] = useState(false);
+  const [tokenInput, setTokenInput] = useState(relayToken ?? '');
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  useEffect(() => { setIp(settings.deviceIp); setPort(settings.devicePort); }, [settings.deviceIp, settings.devicePort]);
+  useEffect(() => { setTokenInput(relayToken ?? ''); }, [relayToken]);
   const [pinInput, setPinInput] = useState('');
   const [pinMode, setPinMode] = useState<'set' | 'remove' | null>(null);
 
   const handleSaveConnection = useCallback(async () => {
-    await updateSettings({ deviceIp: ip.trim(), devicePort: port.trim() }); setTesting(true); await checkConnection(); setTesting(false);
-  }, [ip, port, updateSettings, checkConnection]);
+    setTesting(true);
+    setConnectionError(null);
+    try {
+      await updateRelayToken(tokenInput);
+      await updateSettings({ deviceIp: ip.trim(), devicePort: port.trim() });
+      await checkConnection();
+    } catch {
+      setConnectionError('Could not save relay credentials. Please try again.');
+    } finally { setTesting(false); }
+  }, [ip, port, tokenInput, updateRelayToken, updateSettings, checkConnection]);
   const handlePickImage = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') { Alert.alert('Permission required', 'Please allow photo library access to set a background.'); return; }
@@ -70,16 +80,18 @@ export function SettingsScreen() {
           <Text style={styles.pageTitle}>Settings</Text>
           {!isPremium ? <LinearGradient colors={['#1A0A35', '#0D0020']} style={styles.premiumBanner}><View style={styles.premiumBannerLeft}><MaterialCommunityIcons name="crown" size={24} color="#FFD700" /><View><Text style={styles.premiumBannerTitle}>Go Premium</Text><Text style={styles.premiumBannerSub}>{PRICING.ANNUAL}/yr · {PRICING.LIFETIME} lifetime · {PRICING.MONTHLY}/mo</Text></View></View><TouchableOpacity onPress={() => setGateVisible(true)} style={styles.premiumBannerBtn}><Text style={styles.premiumBannerBtnText}>Upgrade</Text></TouchableOpacity></LinearGradient> : <View style={styles.premiumActive}><MaterialCommunityIcons name="crown" size={20} color="#FFD700" /><Text style={styles.premiumActiveText}>Premium Active · All features unlocked</Text></View>}
           <SectionCard title="Device Connection" icon="wifi">
-            <Row label="Echo Show IP Address"><TextInput value={ip} onChangeText={setIp} style={styles.input} placeholder="192.168.1.100" placeholderTextColor={Colors.gray} keyboardType="decimal-pad" autoCorrect={false} /></Row>
+            <Row label="Relay IP Address"><TextInput value={ip} onChangeText={setIp} style={styles.input} placeholder="192.168.1.100" placeholderTextColor={Colors.gray} keyboardType="decimal-pad" autoCorrect={false} /></Row>
             <Row label="Port"><TextInput value={port} onChangeText={setPort} style={[styles.input, styles.inputSmall]} placeholder="8080" placeholderTextColor={Colors.gray} keyboardType="number-pad" /></Row>
+            <Row label="Relay token"><TextInput value={tokenInput} onChangeText={setTokenInput} secureTextEntry autoCapitalize="none" autoCorrect={false} style={styles.input} accessibilityLabel="Relay token" placeholder="Enter relay token" placeholderTextColor={Colors.gray} /></Row>
+            <Text style={styles.hint}>{Platform.OS === 'web' ? 'Your token is kept only for this browser session. Enter it again after refreshing.' : 'Your token is stored securely on this device.'}</Text>
+            {connectionError && <Text style={[styles.hint, { color: Colors.red }]}>{connectionError}</Text>}
             <View style={styles.connectionStatus}><View style={[styles.dot, { backgroundColor: isConnected ? Colors.green : Colors.red }]} /><Text style={[styles.statusText, { color: isConnected ? Colors.green : Colors.red }]}>{isConnected ? 'Connected' : 'Not connected'}</Text></View>
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleSaveConnection}>{testing ? <ActivityIndicator size="small" color={Colors.amazonDark} /> : <Text style={styles.primaryBtnText}>Save & Test Connection</Text>}</TouchableOpacity>
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleSaveConnection} disabled={testing}>{testing ? <ActivityIndicator size="small" color={Colors.amazonDark} /> : <Text style={styles.primaryBtnText}>Save & Test Connection</Text>}</TouchableOpacity>
             <Text style={styles.hint}>For direct local control, install the companion server on a device on your local network.</Text>
           </SectionCard>
-          <SectionCard title="Alexa Skill" icon="microphone">
-            <View style={styles.alexaStatusRow}><View style={styles.alexaBadge}><MaterialCommunityIcons name={settings.alexaUserId ? 'check-circle' : 'alert-circle-outline'} size={16} color={settings.alexaUserId ? Colors.green : Colors.amazonOrange} /><Text style={[styles.alexaStatusText, { color: settings.alexaUserId ? Colors.green : Colors.amazonOrange }]}>{settings.alexaUserId ? 'Linked' : 'Not linked'}</Text></View><TouchableOpacity onPress={() => setLinkAlexaVisible(true)} style={styles.alexaLinkBtn}><Text style={styles.alexaLinkBtnText}>{settings.alexaUserId ? 'Manage' : 'Link Alexa'}</Text></TouchableOpacity></View>
-            <Text style={styles.hint}>The recommended way to control your Echo devices from anywhere. Requires enabling the "Echo Show Remote" Skill in the Alexa app.</Text>
-            <View style={styles.modeSwitch}><TouchableOpacity onPress={() => updateSettings({ backendMode: 'skill' })} style={[styles.modeChip, settings.backendMode === 'skill' && styles.modeChipActive]}><MaterialCommunityIcons name="cloud" size={14} color={settings.backendMode === 'skill' ? Colors.amazonDark : Colors.gray} /><Text style={[styles.modeChipText, settings.backendMode === 'skill' && styles.modeChipTextActive]}>Alexa Skill</Text></TouchableOpacity><TouchableOpacity onPress={() => updateSettings({ backendMode: 'local' })} style={[styles.modeChip, settings.backendMode === 'local' && styles.modeChipActive]}><MaterialCommunityIcons name="lan" size={14} color={settings.backendMode === 'local' ? Colors.amazonDark : Colors.gray} /><Text style={[styles.modeChipText, settings.backendMode === 'local' && styles.modeChipTextActive]}>Local Server</Text></TouchableOpacity></View>
+          <SectionCard title="Control Mode" icon="cloud">
+            <Text style={styles.hint}>Local Relay uses a trusted server on your network. Cloud Relay uses the configured API gateway. Both require your relay token; Alexa Skill pairing is no longer used for device control.</Text>
+            <View style={styles.modeSwitch}><TouchableOpacity onPress={() => updateSettings({ backendMode: 'skill' })} style={[styles.modeChip, settings.backendMode === 'skill' && styles.modeChipActive]}><MaterialCommunityIcons name="cloud" size={14} color={settings.backendMode === 'skill' ? Colors.amazonDark : Colors.gray} /><Text style={[styles.modeChipText, settings.backendMode === 'skill' && styles.modeChipTextActive]}>Cloud Relay</Text></TouchableOpacity><TouchableOpacity onPress={() => updateSettings({ backendMode: 'local' })} style={[styles.modeChip, settings.backendMode === 'local' && styles.modeChipActive]}><MaterialCommunityIcons name="lan" size={14} color={settings.backendMode === 'local' ? Colors.amazonDark : Colors.gray} /><Text style={[styles.modeChipText, settings.backendMode === 'local' && styles.modeChipTextActive]}>Local Relay</Text></TouchableOpacity></View>
           </SectionCard>
           <SectionCard title="App Theme" icon="palette"><ThemeSelector />{!isPremium && <TouchableOpacity onPress={() => setGateVisible(true)} style={styles.unlockHint}><MaterialCommunityIcons name="lock" size={13} color="#AA44FF" /><Text style={styles.unlockHintText}>Upgrade to unlock 7 premium themes</Text></TouchableOpacity>}</SectionCard>
           <SectionCard title="Echo Show Model" icon="tablet"><View style={styles.genGrid}>{GENERATIONS.map(gen => <TouchableOpacity key={gen.id} onPress={() => updateSettings({ echoGeneration: gen.id })} style={[styles.genCard, settings.echoGeneration === gen.id && { borderColor: gen.color, backgroundColor: `${gen.color}22` }]}><MaterialCommunityIcons name="tablet" size={24} color={gen.color} /><Text style={[styles.genLabel, { color: settings.echoGeneration === gen.id ? gen.color : Colors.white }]}>{gen.label}</Text><Text style={styles.genDesc}>{gen.desc}</Text>{settings.echoGeneration === gen.id && <MaterialCommunityIcons name="check-circle" size={14} color={gen.color} style={styles.checkIcon} />}</TouchableOpacity>)}</View></SectionCard>
@@ -94,7 +106,7 @@ export function SettingsScreen() {
           <View style={{ height: 80 }} />
         </ScrollView>
       </SafeAreaView>
-      <PremiumGate visible={gateVisible} onClose={() => setGateVisible(false)} /><LinkAlexaModal visible={linkAlexaVisible} onClose={() => setLinkAlexaVisible(false)} />
+      <PremiumGate visible={gateVisible} onClose={() => setGateVisible(false)} />
     </BackgroundView>
   );
 }
