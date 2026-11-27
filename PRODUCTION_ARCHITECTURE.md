@@ -34,6 +34,7 @@ Touchscreen navigation, arbitrary app launching, camera controls, display gestur
 - Set `RELAY_TOKEN_REQUIRED=false` only for trusted LAN development.
 - Amazon authentication material remains on the relay and is never sent to the mobile app.
 - The cloud gateway requires its own server-side `RELAY_TOKEN` and forwards only an explicit allowlist of commands.
+- Callers of the cloud command and health gateways must authenticate with a matching bearer token before any request reaches the relay. Legacy `/api/command` and `/api/alexa/send-command` URLs use the same authenticated handler.
 - Relay command requests are rate-limited and payload sizes are bounded.
 - Relay errors no longer expose the Amazon initialization exception through the public health endpoint.
 - No user-generated relay URL is accepted by the API, preventing basic SSRF abuse.
@@ -65,6 +66,10 @@ The deprecated `@vercel/kv` SDK has been removed. Vercel's current storage path 
 
 - `EXPO_PUBLIC_API_URL` — Vercel API origin for cloud mode.
 - A relay token must be supplied through the app's secure configuration for direct relay use; never hard-code a production token into source.
+- In Settings, enter the relay IP/port and token, choose Local Relay or Cloud Relay, then Save & Test Connection. Native apps store the token using the OS secure store; web keeps it in memory for the current browser session, so a refresh requires entering it again. The token is passed to both command transports and native widget requests, never AsyncStorage or an Expo public build variable.
+- New installations default to Local Relay. The old `skill` storage value is retained for compatibility but is labelled Cloud Relay; synthetic Alexa Skill pairing is not a control path.
+
+Local automated checks now include `npm test` for caller authentication, token forwarding, and credential storage. These tests use mocks and do not authenticate with Amazon or establish physical Echo compatibility.
 
 ## Deployment modes
 

@@ -36,4 +36,6 @@ jobs:
           package-manager-cache: false
       - run: npm install --no-audit --no-fund
       - run: npm run type-check
+      - run: npm test
+      - run: npx tsc --noEmit -p api/tsconfig.json
       - run: npx expo export --platform web

@@ -5,6 +5,7 @@
  */
 import { WidgetTaskHandlerProps, WidgetInfo } from '@bam.tech/react-native-android-widget';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { RelayCredentials } from '../../utils/relayCredentials';
 
 const ACTION_COMMAND: Record<string, string> = {
   PLAY_PAUSE: 'play_pause',
@@ -21,9 +22,12 @@ async function sendWidgetCommand(command: string): Promise<void> {
   try {
     const ip = (await AsyncStorage.getItem('device_ip')) ?? '192.168.1.100';
     const port = (await AsyncStorage.getItem('device_port')) ?? '8080';
+    const token = await RelayCredentials.getToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
     await fetch(`http://${ip}:${port}/command`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ command }),
     });
   } catch { /* device unreachable — ignore */ }

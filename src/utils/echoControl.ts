@@ -115,26 +115,19 @@ export class EchoControlClient {
   }
 
   async ping(): Promise<boolean> {
-    if (this.mode === 'skill') {
-      if (!this.cloudUrl) return false;
-      try {
-        const res = await fetch(`${this.cloudUrl}/api/relay/health`);
-        return res.ok;
-      } catch {
-        return false;
-      }
-    }
+    if (this.mode === 'skill' && (!this.cloudUrl || !this.relayToken)) return false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.mode === 'skill' ? 5000 : 2000);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2000);
       const headers: Record<string, string> = {};
       if (this.relayToken) headers.Authorization = `Bearer ${this.relayToken}`;
-      const response = await fetch(`${this.baseUrl}/health`, { signal: controller.signal, headers });
-      clearTimeout(timer);
-      return response.ok;
+      const url = this.mode === 'skill' ? `${this.cloudUrl}/api/relay/health` : `${this.baseUrl}/health`;
+      const response = await fetch(url, { signal: controller.signal, headers });
+      const data = await response.json().catch(() => ({}));
+      return response.ok && data.ready === true;
     } catch {
       return false;
-    }
+    } finally { clearTimeout(timer); }
   }
 }
 

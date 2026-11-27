@@ -4,13 +4,17 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
   ReactNode,
 } from 'react';
 import { AppSettings, Storage } from '../utils/storage';
 import { EchoControlClient, EchoCommand, CommandResult } from '../utils/echoControl';
+import { RelayCredentials } from '../utils/relayCredentials';
 
 interface AppContextValue {
   settings: AppSettings;
+  relayToken: string | null;
+  updateRelayToken: (token: string | null) => Promise<void>;
   updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
   sendCommand: (cmd: EchoCommand, payload?: Record<string, unknown>) => Promise<CommandResult>;
   sendAlexaText: (text: string) => Promise<CommandResult>;
@@ -32,47 +36,62 @@ export function AppProvider({ children }: { children: ReactNode }) {
     devicePort: '8080',
     echoGeneration: 'show10',
     hapticsEnabled: true,
-    backendMode: 'skill',
+    backendMode: 'local',
     alexaUserId: null,
   });
   const [isConnected, setIsConnected] = useState(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [relayToken, setRelayToken] = useState<string | null>(null);
+  const settingsRef = useRef(settings);
+  const tokenRef = useRef<string | null>(null);
   const [client, setClient] = useState<EchoControlClient>(
-    () => new EchoControlClient({ mode: 'skill' })
+    () => new EchoControlClient({ mode: 'local' })
   );
+  const clientRef = useRef(client);
+
+  const configureClient = useCallback((s: AppSettings, token: string | null) => {
+    const nextClient = new EchoControlClient({
+      ip: s.deviceIp, port: s.devicePort, mode: s.backendMode,
+      alexaUserId: s.alexaUserId, relayToken: token,
+    });
+    clientRef.current = nextClient;
+    setClient(nextClient);
+  }, []);
 
   useEffect(() => {
-    Storage.getSettings().then(s => {
+    Promise.all([Storage.getSettings(), RelayCredentials.getToken().catch(() => null)]).then(([s, token]) => {
+      settingsRef.current = s;
+      tokenRef.current = token;
       setSettings(s);
-      setClient(new EchoControlClient({
-        ip: s.deviceIp,
-        port: s.devicePort,
-        mode: s.backendMode,
-        alexaUserId: s.alexaUserId,
-      }));
+      setRelayToken(token);
+      configureClient(s, token);
     });
     refreshHistory();
   }, []);
 
   const updateSettings = useCallback(async (patch: Partial<AppSettings>) => {
-    const next = { ...settings, ...patch };
+    const next = { ...settingsRef.current, ...patch };
+    settingsRef.current = next;
     setSettings(next);
-    await Storage.saveSettings(patch);
     if (
       patch.deviceIp !== undefined || patch.devicePort !== undefined
       || patch.backendMode !== undefined || patch.alexaUserId !== undefined
     ) {
-      setClient(new EchoControlClient({
-        ip: next.deviceIp,
-        port: next.devicePort,
-        mode: next.backendMode,
-        alexaUserId: next.alexaUserId,
-      }));
+      configureClient(next, tokenRef.current);
     }
-  }, [settings]);
+    await Storage.saveSettings(patch);
+  }, [configureClient]);
+
+  const updateRelayToken = useCallback(async (value: string | null) => {
+    const token = value?.trim() || null;
+    await RelayCredentials.saveToken(token);
+    tokenRef.current = token;
+    setRelayToken(token);
+    configureClient(settingsRef.current, token);
+  }, [configureClient]);
 
   const checkConnection = useCallback(async () => {
-    const ok = await client.ping();
+    const ok = await clientRef.current.ping();
     setIsConnected(ok);
   }, [client]);
 
@@ -86,13 +105,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     cmd: EchoCommand,
     payload?: Record<string, unknown>
   ): Promise<CommandResult> => {
-    const result = await client.sendCommand(cmd, payload);
+    const result = await clientRef.current.sendCommand(cmd, payload);
     setIsConnected(result.success);
     return result;
   }, [client]);
 
   const sendAlexaText = useCallback(async (text: string): Promise<CommandResult> => {
-    const result = await client.sendAlexaText(text);
+    const result = await clientRef.current.sendAlexaText(text);
     if (result.success) {
       await Storage.addCommandToHistory(text);
       await refreshHistory();
@@ -108,6 +127,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider value={{
       settings,
+      relayToken,
+      updateRelayToken,
       updateSettings,
       sendCommand,
       sendAlexaText,

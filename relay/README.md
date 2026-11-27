@@ -38,7 +38,9 @@ Keep this JSON private. It represents authenticated access to the Amazon account
 
 Set `RELAY_TOKEN` to a long random value. The mobile app sends it as `Authorization: Bearer <token>` when configured for a protected relay.
 
-If `RELAY_TOKEN` is empty, the relay is intentionally LAN-open for development only. Do not expose an unauthenticated relay to the internet.
+An empty `RELAY_TOKEN` keeps the protected routes locked by default. Set
+`RELAY_TOKEN_REQUIRED=false` explicitly to allow token-free development on a
+trusted LAN. Do not expose an unauthenticated relay to the internet.
 
 Never commit the cookie, credentials, or token to Git.
 
@@ -46,7 +48,8 @@ Never commit the cookie, credentials, or token to Git.
 
 `GET /ping` — liveness check.
 
-`GET /health` — Alexa connection status.
+`GET /health` — authenticated Alexa connection status. The app checks both the
+token and `ready: true` before reporting a connected relay.
 
 `GET /devices` — available Echo devices.
 

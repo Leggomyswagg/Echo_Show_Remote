@@ -157,6 +157,7 @@ function execute(device, command, payload = {}) {
 
 app.get('/ping', (_req, res) => res.json({ ok: true, service: 'echo-show-remote-relay', ready }));
 
+app.use('/health', (req, res, next) => authorized(req) ? next() : res.status(401).json({ error: 'Unauthorized' }));
 app.get('/health', (_req, res) => res.status(ready ? 200 : 503).json({
   ok: ready,
   ready,
